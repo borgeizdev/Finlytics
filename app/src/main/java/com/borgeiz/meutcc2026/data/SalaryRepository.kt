@@ -12,10 +12,10 @@ import java.util.Calendar
 
 /**
  * Ponto único de acesso a users/{uid}/salaryConfig e ao lançamento
- * automático de salário. Antes desta classe, MainActivity, SalaryFragment
- * e ProfileFragment tinham cada uma sua própria cópia de
- * checkAndPostSalaryIfNeeded, e uma delas divergiu (faltava o guard de
- * dayOfMonth == 0, gerando transações com data "...-00").
+ * automático de salário. Antes desta classe, MainActivity e ProfileFragment
+ * tinham cada uma sua própria cópia de checkAndPostSalaryIfNeeded, e uma
+ * delas divergiu (faltava o guard de dayOfMonth == 0, gerando transações
+ * com data "...-00").
  */
 class SalaryRepository(uid: String) {
 
