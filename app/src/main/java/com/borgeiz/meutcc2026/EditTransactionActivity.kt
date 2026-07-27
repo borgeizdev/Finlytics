@@ -9,6 +9,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.textfield.TextInputEditText
+import com.borgeiz.meutcc2026.model.PaymentMethods
 import com.borgeiz.meutcc2026.model.Transaction
 import com.borgeiz.meutcc2026.util.parseAmountPtBr
 import com.google.firebase.auth.FirebaseAuth
@@ -34,6 +35,7 @@ class EditTransactionActivity : AppCompatActivity() {
         val etTitle       = findViewById<TextInputEditText>(R.id.etEditTitle)
         val etAmount      = findViewById<TextInputEditText>(R.id.etEditAmount)
         val spCategory    = findViewById<Spinner>(R.id.spEditCategory)
+        val spPaymentMethod = findViewById<Spinner>(R.id.spEditPaymentMethod)
         val etDate        = findViewById<TextInputEditText>(R.id.etEditDate)
         val etDescription = findViewById<TextInputEditText>(R.id.etEditDescription)
         val btnUpdate     = findViewById<Button>(R.id.btnUpdate)
@@ -42,6 +44,7 @@ class EditTransactionActivity : AppCompatActivity() {
         val id       = intent.getStringExtra("id") ?: ""
         val type     = intent.getStringExtra("type") ?: ""
         val category = intent.getStringExtra("category") ?: ""
+        val paymentMethod = intent.getStringExtra("paymentMethod") ?: ""
 
         etTitle.setText(intent.getStringExtra("title"))
         etAmount.setText(intent.getDoubleExtra("amount", 0.0).let {
@@ -82,6 +85,20 @@ class EditTransactionActivity : AppCompatActivity() {
         val idx = cats.indexOfFirst { it.equals(category, ignoreCase = true) }
         if (idx >= 0) spCategory.setSelection(idx)
 
+        // Forma de pagamento (transações antigas podem não ter o campo preenchido)
+        val currentPaymentMethod = paymentMethod.ifBlank { PaymentMethods.NAO_INFORMADO }
+        val paymentMethods = PaymentMethods.ALL.toMutableList()
+        if (paymentMethods.none { it.equals(currentPaymentMethod, ignoreCase = true) }) {
+            paymentMethods.add(0, currentPaymentMethod)
+        }
+        spPaymentMethod.adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_dropdown_item,
+            paymentMethods
+        )
+        val paymentIdx = paymentMethods.indexOfFirst { it.equals(currentPaymentMethod, ignoreCase = true) }
+        if (paymentIdx >= 0) spPaymentMethod.setSelection(paymentIdx)
+
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: run { finish(); return }
         val ref = FirebaseDatabase.getInstance().reference
             .child("users").child(uid).child("transactions").child(id)
@@ -92,13 +109,15 @@ class EditTransactionActivity : AppCompatActivity() {
             val amount = parseAmountPtBr(etAmount.text?.toString())
             if (amount == null || amount <= 0.0) { etAmount.error = "Informe um valor valido"; return@setOnClickListener }
 
+            val selectedPaymentMethod = spPaymentMethod.selectedItem?.toString() ?: ""
             val transaction = Transaction(
                 type        = type,
                 title       = titleStr,
                 amount      = amount,
                 category    = spCategory.selectedItem?.toString() ?: "",
                 date        = etDate.text?.toString()?.trim() ?: "",
-                description = etDescription.text?.toString()?.trim() ?: ""
+                description = etDescription.text?.toString()?.trim() ?: "",
+                paymentMethod = if (selectedPaymentMethod == PaymentMethods.NAO_INFORMADO) "" else selectedPaymentMethod
             )
             ref.setValue(transaction).addOnSuccessListener {
                 Toast.makeText(this, "Atualizado!", Toast.LENGTH_SHORT).show()

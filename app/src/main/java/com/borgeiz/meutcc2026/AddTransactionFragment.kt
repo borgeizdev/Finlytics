@@ -12,6 +12,7 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
+import com.borgeiz.meutcc2026.model.PaymentMethods
 import com.borgeiz.meutcc2026.model.Transaction
 import com.borgeiz.meutcc2026.util.parseAmountPtBr
 import com.google.firebase.auth.FirebaseAuth
@@ -35,6 +36,7 @@ class AddTransactionFragment : Fragment() {
     private lateinit var btnTypeReceita: MaterialButton
     private lateinit var btnTypeDespesa: MaterialButton
     private lateinit var actvCategory: AutoCompleteTextView
+    private lateinit var actvPaymentMethod: AutoCompleteTextView
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -46,6 +48,13 @@ class AddTransactionFragment : Fragment() {
         btnTypeReceita = view.findViewById(R.id.btnTypeReceita)
         btnTypeDespesa = view.findViewById(R.id.btnTypeDespesa)
         actvCategory   = view.findViewById(R.id.actvCategory)
+        actvPaymentMethod = view.findViewById(R.id.actvPaymentMethod)
+
+        val paymentAdapter = ArrayAdapter(
+            requireContext(), android.R.layout.simple_dropdown_item_1line, PaymentMethods.ALL
+        )
+        actvPaymentMethod.setAdapter(paymentAdapter)
+        actvPaymentMethod.setText(PaymentMethods.ALL[0], false)
 
         val etTitle       = view.findViewById<TextInputEditText>(R.id.etTitle)
         val etAmount      = view.findViewById<TextInputEditText>(R.id.etAmount)
@@ -96,7 +105,8 @@ class AddTransactionFragment : Fragment() {
                     amount      = amount,
                     category    = actvCategory.text.toString(),
                     date        = dateStr,
-                    description = descStr
+                    description = descStr,
+                    paymentMethod = actvPaymentMethod.text.toString()
                 )
             ).addOnSuccessListener {
                 val ctx = context ?: return@addOnSuccessListener

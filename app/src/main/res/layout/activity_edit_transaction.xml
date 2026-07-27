@@ -97,6 +97,26 @@
                     android:paddingEnd="14dp"
                     android:layout_marginBottom="16dp" />
 
+                <!-- Forma de pagamento -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="FORMA DE PAGAMENTO"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.08"
+                    android:layout_marginBottom="6dp" />
+
+                <Spinner
+                    android:id="@+id/spEditPaymentMethod"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:background="@drawable/bg_spinner"
+                    android:paddingStart="14dp"
+                    android:paddingEnd="14dp"
+                    android:layout_marginBottom="16dp" />
+
                 <!-- Data -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"

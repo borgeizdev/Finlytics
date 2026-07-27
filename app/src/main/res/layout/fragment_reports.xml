@@ -27,7 +27,20 @@
             android:text="Análise das suas finanças"
             android:textColor="@color/text_hint"
             android:textSize="13sp"
-            android:layout_marginBottom="20dp" />
+            android:layout_marginBottom="16dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnPaymentMethodAnalysis"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginBottom="20dp"
+            android:text="Análise por forma de pagamento"
+            android:textSize="13sp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            app:cornerRadius="12dp"
+            app:icon="@drawable/ic_calendar"
+            app:iconGravity="textStart"
+            app:strokeColor="@color/border" />
 
         <!-- Card Receitas -->
         <androidx.cardview.widget.CardView

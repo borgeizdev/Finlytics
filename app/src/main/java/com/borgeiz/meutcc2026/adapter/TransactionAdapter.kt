@@ -53,6 +53,7 @@ class TransactionAdapter(
                 putExtra("category",    item.category)
                 putExtra("date",        item.date)
                 putExtra("description", item.description)
+                putExtra("paymentMethod", item.paymentMethod)
             }
             ctx.startActivity(intent)
         }

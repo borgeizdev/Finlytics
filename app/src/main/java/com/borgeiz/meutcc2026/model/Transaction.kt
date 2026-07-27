@@ -9,5 +9,6 @@ data class Transaction(
     var amount: Double = 0.0,
     var category: String = "",
     var date: String = "",
-    var description: String = ""
+    var description: String = "",
+    var paymentMethod: String = ""
 )
