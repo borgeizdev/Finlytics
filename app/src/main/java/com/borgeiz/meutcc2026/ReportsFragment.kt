@@ -1,7 +1,10 @@
 package com.borgeiz.meutcc2026
 
 import android.graphics.Color
+import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -17,6 +20,7 @@ import com.borgeiz.meutcc2026.data.expenseTotal
 import com.borgeiz.meutcc2026.data.incomeTotal
 import com.borgeiz.meutcc2026.model.Transaction
 import com.borgeiz.meutcc2026.util.buildBreakdownRows
+import com.borgeiz.meutcc2026.util.chartPaletteHex
 import com.borgeiz.meutcc2026.util.isDarkMode
 import com.borgeiz.meutcc2026.util.setupBreakdownPieChart
 import com.github.mikephil.charting.charts.BarChart
@@ -47,6 +51,13 @@ class ReportsFragment : Fragment() {
         "Setembro", "Outubro", "Novembro", "Dezembro"
     )
 
+    private data class CategoryDelta(
+        val category: String,
+        val current: Double,
+        val previous: Double,
+        val pct: Double
+    )
+
     private var txRepoRef: TransactionsRepository? = null
     private var txListenerRef: ValueEventListener? = null
 
@@ -72,6 +83,19 @@ class ReportsFragment : Fragment() {
         val barChart        = view.findViewById<BarChart>(R.id.barChart)
         val spCatMonth      = view.findViewById<Spinner>(R.id.spCatMonth)
         val btnPaymentMethodAnalysis = view.findViewById<MaterialButton>(R.id.btnPaymentMethodAnalysis)
+
+        val tvAvgPerDay        = view.findViewById<TextView>(R.id.tvAvgPerDay)
+        val tvTopExpenseValue  = view.findViewById<TextView>(R.id.tvTopExpenseValue)
+        val tvTopExpenseTitle  = view.findViewById<TextView>(R.id.tvTopExpenseTitle)
+        val tvTopIncomeValue   = view.findViewById<TextView>(R.id.tvTopIncomeValue)
+        val tvTopIncomeTitle   = view.findViewById<TextView>(R.id.tvTopIncomeTitle)
+        val tvHeroBadge        = view.findViewById<TextView>(R.id.tvHeroBadge)
+        val tvHeroValue        = view.findViewById<TextView>(R.id.tvHeroValue)
+        val tvHeroDetail       = view.findViewById<TextView>(R.id.tvHeroDetail)
+        val llCategoryVariation = view.findViewById<LinearLayout>(R.id.llCategoryVariation)
+        val weekdayChart       = view.findViewById<BarChart>(R.id.weekdayChart)
+        val tvWeekdayEmpty     = view.findViewById<TextView>(R.id.tvWeekdayEmpty)
+        weekdayChart.setNoDataText("")
 
         btnPaymentMethodAnalysis.setOnClickListener {
             parentFragmentManager.beginTransaction()
@@ -131,6 +155,98 @@ class ReportsFragment : Fragment() {
             }
         }
 
+        fun inMonth(t: Transaction, year: Int, month: Int): Boolean {
+            val parts = t.date.split("-")
+            return parts.size >= 2 && parts[0].toIntOrNull() == year && parts[1].toIntOrNull() == month
+        }
+
+        fun refreshInsights() {
+            if (!isAdded) return
+            val ctx = requireContext()
+
+            val cal      = Calendar.getInstance()
+            val curYear  = cal.get(Calendar.YEAR)
+            val curMonth = cal.get(Calendar.MONTH) + 1
+            val today    = cal.get(Calendar.DAY_OF_MONTH)
+
+            val prevCal   = Calendar.getInstance().apply { add(Calendar.MONTH, -1) }
+            val prevYear  = prevCal.get(Calendar.YEAR)
+            val prevMonth = prevCal.get(Calendar.MONTH) + 1
+
+            val curExpenses  = allTransactions.filter { it.type == "despesa" && inMonth(it, curYear, curMonth) }
+            val prevExpenses = allTransactions.filter { it.type == "despesa" && inMonth(it, prevYear, prevMonth) }
+            val curIncomes   = allTransactions.filter { it.type == "receita" && inMonth(it, curYear, curMonth) }
+
+            val curTotal  = curExpenses.sumOf { it.amount }
+            val prevTotal = prevExpenses.sumOf { it.amount }
+
+            // Média diária e maiores lançamentos
+            tvAvgPerDay.text = "R$ ${"%.2f".format(if (today > 0) curTotal / today else 0.0)}"
+
+            val topExpense = curExpenses.maxByOrNull { it.amount }
+            tvTopExpenseValue.text = topExpense?.let { "R$ ${"%.2f".format(it.amount)}" } ?: "—"
+            tvTopExpenseTitle.text = topExpense?.title?.ifBlank { "Sem título" } ?: "Nenhuma despesa"
+
+            val topIncome = curIncomes.maxByOrNull { it.amount }
+            tvTopIncomeValue.text = topIncome?.let { "R$ ${"%.2f".format(it.amount)}" } ?: "—"
+            tvTopIncomeTitle.text = topIncome?.title?.ifBlank { "Sem título" } ?: "Nenhuma receita"
+
+            // Hero: variação total do mês
+            val prevMonthName = monthLabelsFull.getOrElse(prevMonth) { "" }
+            if (prevTotal <= 0.0) {
+                tvHeroBadge.visibility = View.GONE
+                tvHeroValue.text = "R$ ${"%.2f".format(curTotal)}"
+                tvHeroDetail.text = "Sem dados de $prevMonthName para comparar."
+            } else {
+                val deltaPct = (curTotal - prevTotal) / prevTotal * 100.0
+                val isIncrease = deltaPct > 0.5
+                val isDecrease = deltaPct < -0.5
+                val arrow = if (isIncrease) "▲" else if (isDecrease) "▼" else "—"
+                val badgeBgRes  = if (isIncrease) R.color.expense_bg else R.color.income_bg
+                val badgeTxtRes = if (isIncrease) R.color.expense else R.color.income
+
+                tvHeroBadge.visibility = View.VISIBLE
+                tvHeroBadge.text = "$arrow ${"%.0f".format(kotlin.math.abs(deltaPct))}%"
+                tvHeroBadge.setTextColor(ContextCompat.getColor(ctx, badgeTxtRes))
+                tvHeroBadge.background = GradientDrawable().apply {
+                    cornerRadius = 999f
+                    setColor(ContextCompat.getColor(ctx, badgeBgRes))
+                }
+                tvHeroValue.text = "R$ ${"%.2f".format(curTotal)}"
+
+                val diff = kotlin.math.abs(curTotal - prevTotal)
+                val comparativo = if (isIncrease) "a mais" else if (isDecrease) "a menos" else "praticamente igual a"
+                tvHeroDetail.text =
+                    "Você gastou R$ ${"%.2f".format(diff)} $comparativo que em $prevMonthName (R$ ${"%.2f".format(prevTotal)})"
+            }
+
+            // Variação por categoria
+            val curCat  = curExpenses.groupBy { it.category.ifBlank { "Outros" } }.mapValues { (_, v) -> v.sumOf { it.amount } }
+            val prevCat = prevExpenses.groupBy { it.category.ifBlank { "Outros" } }.mapValues { (_, v) -> v.sumOf { it.amount } }
+            val allCats = curCat.keys + prevCat.keys
+            val deltas = allCats.map { cat ->
+                val cur  = curCat[cat] ?: 0.0
+                val prev = prevCat[cat] ?: 0.0
+                val pct = when {
+                    prev > 0.0 -> (cur - prev) / prev * 100.0
+                    cur > 0.0  -> 100.0
+                    else       -> 0.0
+                }
+                CategoryDelta(cat, cur, prev, pct)
+            }.sortedByDescending { it.pct }.take(6)
+            buildCategoryVariationRows(llCategoryVariation, deltas)
+
+            // Dia da semana com mais gasto
+            if (curExpenses.isEmpty()) {
+                weekdayChart.visibility = View.GONE
+                tvWeekdayEmpty.visibility = View.VISIBLE
+            } else {
+                weekdayChart.visibility = View.VISIBLE
+                tvWeekdayEmpty.visibility = View.GONE
+                setupWeekdayChart(weekdayChart, curExpenses)
+            }
+        }
+
         fun renderSummary() {
             val totalIncome  = allTransactions.incomeTotal()
             val totalExpense = allTransactions.expenseTotal()
@@ -141,6 +257,7 @@ class ReportsFragment : Fragment() {
 
             setupBarChart(barChart, allTransactions)
             refreshCategoryChart(spCatMonth.selectedItemPosition)
+            refreshInsights()
         }
 
         spCatMonth.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
@@ -166,6 +283,141 @@ class ReportsFragment : Fragment() {
         }
 
         return view
+    }
+
+    private fun buildCategoryVariationRows(container: LinearLayout, deltas: List<CategoryDelta>) {
+        val ctx = requireContext()
+        val dp  = ctx.resources.displayMetrics.density
+        container.removeAllViews()
+
+        if (deltas.isEmpty()) {
+            container.addView(TextView(ctx).apply {
+                text = "Sem dados suficientes para comparar categorias."
+                setTextColor(ContextCompat.getColor(ctx, R.color.text_hint))
+                textSize = 14f
+            })
+            return
+        }
+
+        deltas.forEachIndexed { idx, d ->
+            val isLast = idx == deltas.size - 1
+            val dotColor = Color.parseColor(chartPaletteHex[idx % chartPaletteHex.size])
+
+            val row = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { if (!isLast) bottomMargin = (10 * dp).toInt() }
+            }
+
+            val dot = View(ctx).apply {
+                val size = (9 * dp).toInt()
+                layoutParams = LinearLayout.LayoutParams(size, size).apply { marginEnd = (10 * dp).toInt() }
+                background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(dotColor) }
+            }
+
+            val textBlock = LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            }
+
+            val nameRow = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+            }
+            nameRow.addView(TextView(ctx).apply {
+                text = d.category
+                textSize = 13f
+                setTypeface(null, Typeface.BOLD)
+                setTextColor(ContextCompat.getColor(ctx, R.color.text_heading))
+            })
+            if (idx == 0 && d.pct > 0.5) {
+                nameRow.addView(TextView(ctx).apply {
+                    text = "  MAIOR ALTA"
+                    textSize = 9.5f
+                    setTypeface(null, Typeface.BOLD)
+                    setTextColor(ContextCompat.getColor(ctx, R.color.expense))
+                })
+            }
+
+            val tvValues = TextView(ctx).apply {
+                text = "R$ ${"%.2f".format(d.previous)} → R$ ${"%.2f".format(d.current)}"
+                textSize = 11f
+                setTextColor(ContextCompat.getColor(ctx, R.color.text_hint))
+            }
+
+            textBlock.addView(nameRow)
+            textBlock.addView(tvValues)
+
+            val arrow = if (d.pct > 0.5) "▲" else if (d.pct < -0.5) "▼" else "—"
+            val deltaColorRes = when {
+                d.pct > 0.5  -> R.color.expense
+                d.pct < -0.5 -> R.color.income
+                else         -> R.color.text_hint
+            }
+            val tvDelta = TextView(ctx).apply {
+                text = "$arrow ${"%.0f".format(kotlin.math.abs(d.pct))}%"
+                textSize = 12.5f
+                setTypeface(null, Typeface.BOLD)
+                setTextColor(ContextCompat.getColor(ctx, deltaColorRes))
+            }
+
+            row.addView(dot)
+            row.addView(textBlock)
+            row.addView(tvDelta)
+            container.addView(row)
+        }
+    }
+
+    private fun setupWeekdayChart(barChart: BarChart, expenses: List<Transaction>) {
+        val totals = DoubleArray(7) // 0=Seg .. 6=Dom
+        for (t in expenses) {
+            val parts = t.date.split("-")
+            if (parts.size != 3) continue
+            val y = parts[0].toIntOrNull() ?: continue
+            val m = parts[1].toIntOrNull() ?: continue
+            val d = parts[2].toIntOrNull() ?: continue
+            val c = Calendar.getInstance()
+            c.set(y, m - 1, d, 0, 0, 0)
+            val dow = c.get(Calendar.DAY_OF_WEEK) // 1=Dom .. 7=Sáb
+            val idx = (dow + 5) % 7
+            totals[idx] += t.amount
+        }
+
+        val labels = listOf("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom")
+        val maxIdx = totals.indices.maxByOrNull { totals[it] } ?: -1
+
+        val isDark = isDarkMode(requireContext())
+        val neutralColor = if (isDark) Color.parseColor("#1E293B") else Color.parseColor("#E2E8F0")
+        val peakColor = Color.parseColor("#2563EB")
+        val axisTextColor = if (isDark) Color.parseColor("#94A3B8") else Color.parseColor("#6B7280")
+
+        val entries = totals.mapIndexed { i, v -> BarEntry(i.toFloat(), v.toFloat()) }
+        val dataSet = BarDataSet(entries, "").apply {
+            colors = totals.indices.map { if (it == maxIdx && totals[it] > 0.0) peakColor else neutralColor }.toMutableList()
+            setDrawValues(false)
+        }
+
+        barChart.apply {
+            data = BarData(dataSet).apply { barWidth = 0.6f }
+            description.isEnabled = false
+            legend.isEnabled = false
+            setFitBars(true)
+            xAxis.apply {
+                valueFormatter = IndexAxisValueFormatter(labels)
+                position = XAxis.XAxisPosition.BOTTOM
+                granularity = 1f
+                setDrawGridLines(false)
+                textSize = 11f
+                textColor = axisTextColor
+            }
+            axisLeft.isEnabled = false
+            axisRight.isEnabled = false
+            setBackgroundColor(Color.TRANSPARENT)
+            animateY(600)
+            invalidate()
+        }
     }
 
     private fun setupBarChart(barChart: BarChart, transactions: List<Transaction>) {
