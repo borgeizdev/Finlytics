@@ -9,6 +9,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.textfield.TextInputEditText
+import com.borgeiz.meutcc2026.data.CategoryRepository
 import com.borgeiz.meutcc2026.model.PaymentMethods
 import com.borgeiz.meutcc2026.model.Transaction
 import com.borgeiz.meutcc2026.util.parseAmountPtBr
@@ -17,16 +18,6 @@ import com.google.firebase.database.FirebaseDatabase
 import java.util.Calendar
 
 class EditTransactionActivity : AppCompatActivity() {
-
-    private val incomeCategories = listOf(
-        "Salario", "Freelance", "Investimentos",
-        "Venda", "Presente", "Reembolso", "Outros"
-    )
-    private val expenseCategories = listOf(
-        "Alimentacao", "Transporte", "Moradia",
-        "Contas", "Saude", "Lazer",
-        "Educacao", "Compras", "Assinaturas", "Outros"
-    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,6 +36,8 @@ class EditTransactionActivity : AppCompatActivity() {
         val type     = intent.getStringExtra("type") ?: ""
         val category = intent.getStringExtra("category") ?: ""
         val paymentMethod = intent.getStringExtra("paymentMethod") ?: ""
+
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: run { finish(); return }
 
         etTitle.setText(intent.getStringExtra("title"))
         etAmount.setText(intent.getDoubleExtra("amount", 0.0).let {
@@ -70,20 +63,23 @@ class EditTransactionActivity : AppCompatActivity() {
             ).show()
         }
 
-        // Categorias conforme tipo
-        val cats = (if (type == "receita") incomeCategories else expenseCategories).toMutableList()
-        if (category.isNotBlank() && cats.none { it.equals(category, ignoreCase = true) }) {
-            // Categoria salva não está mais na lista atual: preserva o valor original
-            // como opção em vez de deixar o spinner cair no índice 0 e trocá-la sem avisar.
-            cats.add(0, category)
+        // Categorias conforme tipo (carregadas do Firebase, com fallback pra categoria antiga)
+        CategoryRepository(uid).loadConfig { config ->
+            val baseCats = if (type == "receita") config.income else config.expense
+            val cats = baseCats.toMutableList()
+            if (category.isNotBlank() && cats.none { it.equals(category, ignoreCase = true) }) {
+                // Categoria salva não está mais na lista atual: preserva o valor original
+                // como opção em vez de deixar o spinner cair no índice 0 e trocá-la sem avisar.
+                cats.add(0, category)
+            }
+            spCategory.adapter = ArrayAdapter(
+                this,
+                android.R.layout.simple_spinner_dropdown_item,
+                cats
+            )
+            val idx = cats.indexOfFirst { it.equals(category, ignoreCase = true) }
+            if (idx >= 0) spCategory.setSelection(idx)
         }
-        spCategory.adapter = ArrayAdapter(
-            this,
-            android.R.layout.simple_spinner_dropdown_item,
-            cats
-        )
-        val idx = cats.indexOfFirst { it.equals(category, ignoreCase = true) }
-        if (idx >= 0) spCategory.setSelection(idx)
 
         // Forma de pagamento (transações antigas podem não ter o campo preenchido)
         val currentPaymentMethod = paymentMethod.ifBlank { PaymentMethods.NAO_INFORMADO }
@@ -99,7 +95,6 @@ class EditTransactionActivity : AppCompatActivity() {
         val paymentIdx = paymentMethods.indexOfFirst { it.equals(currentPaymentMethod, ignoreCase = true) }
         if (paymentIdx >= 0) spPaymentMethod.setSelection(paymentIdx)
 
-        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: run { finish(); return }
         val ref = FirebaseDatabase.getInstance().reference
             .child("users").child(uid).child("transactions").child(id)
 

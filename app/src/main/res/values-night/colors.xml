@@ -39,6 +39,8 @@
     <color name="settings_badge_profile">#1E3A5F</color>
     <color name="settings_badge_display">#2D1B69</color>
     <color name="settings_badge_salary">#052E16</color>
+    <color name="settings_badge_category">#422006</color>
+    <color name="settings_badge_goal">#083344</color>
 
     <!-- aliases usados no themes.xml night -->
     <color name="dark_primary">#3B82F6</color>

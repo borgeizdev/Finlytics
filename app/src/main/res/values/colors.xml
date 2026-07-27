@@ -40,6 +40,8 @@
     <color name="settings_badge_profile">#DBEAFE</color>
     <color name="settings_badge_display">#EDE9FE</color>
     <color name="settings_badge_salary">#DCFCE7</color>
+    <color name="settings_badge_category">#FEF3C7</color>
+    <color name="settings_badge_goal">#CFFAFE</color>
 
     <!-- aliases usados no themes.xml -->
     <color name="dark_primary">#2563EB</color>

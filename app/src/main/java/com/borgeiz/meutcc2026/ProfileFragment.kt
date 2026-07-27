@@ -10,7 +10,12 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.*
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.fragment.app.Fragment
+import com.borgeiz.meutcc2026.data.CategoryRepository
+import com.borgeiz.meutcc2026.data.GoalRepository
 import com.borgeiz.meutcc2026.data.RecurringRepository
+import com.borgeiz.meutcc2026.model.CategoryConfig
+import com.borgeiz.meutcc2026.model.Goal
+import com.borgeiz.meutcc2026.model.GoalConfig
 import com.borgeiz.meutcc2026.model.RecurringConfig
 import com.borgeiz.meutcc2026.model.RecurringItem
 import com.borgeiz.meutcc2026.util.parseAmountPtBr
@@ -100,7 +105,9 @@ class ProfileFragment : Fragment() {
         val menuItems = listOf(
             MenuItem(R.drawable.ic_person,    R.color.primary, R.color.settings_badge_profile, "Configurações do perfil",   "Editar nome de usuário"),
             MenuItem(R.drawable.ic_palette,   R.color.primary, R.color.settings_badge_display, "Configurações de exibição", "Tema claro, escuro ou sistema"),
-            MenuItem(R.drawable.ic_wallet,    R.color.income,  R.color.settings_badge_salary,  "Recorrências",               "Salário, assinaturas e contas fixas")
+            MenuItem(R.drawable.ic_wallet,    R.color.income,  R.color.settings_badge_salary,  "Recorrências",               "Salário, assinaturas e contas fixas"),
+            MenuItem(R.drawable.ic_tag,       R.color.primary, R.color.settings_badge_category, "Categorias",                "Categorias de receita e despesa"),
+            MenuItem(R.drawable.ic_bar_chart, R.color.primary, R.color.settings_badge_goal,     "Metas",                     "Limites de gasto mensais")
         )
 
         val dialog = AlertDialog.Builder(ctx)
@@ -124,6 +131,8 @@ class ProfileFragment : Fragment() {
                         0 -> showEditProfileDialog()
                         1 -> showDisplaySettingsDialog()
                         2 -> showRecurringItemsDialog(uid)
+                        3 -> showCategoriesDialog(uid)
+                        4 -> showGoalsDialog(uid)
                     }
                 }
             }
@@ -590,6 +599,470 @@ class ProfileFragment : Fragment() {
         // Frame full-screen transparente — toque fora fecha o dialog. O conteúdo
         // rola dentro de um ScrollView porque a lista de itens recorrentes pode
         // crescer além da altura da tela (ao contrário da antiga entrada única de salário).
+        val frame = FrameLayout(ctx).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+            setOnClickListener { dialog.dismiss() }
+        }
+        val scrollWrapper = ScrollView(ctx).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+            val h = dpToPx(24)
+            val w = dpToPx(20)
+            setPadding(w, h, w, h)
+            clipToPadding = false
+            setOnClickListener { /* consome o toque para não fechar */ }
+        }
+        root.layoutParams = ScrollView.LayoutParams(
+            ScrollView.LayoutParams.MATCH_PARENT,
+            ScrollView.LayoutParams.WRAP_CONTENT
+        )
+        scrollWrapper.addView(root)
+        frame.addView(scrollWrapper)
+
+        dialog.setContentView(frame)
+        dialog.window?.apply {
+            setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+            setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+            setLayout(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT
+            )
+            addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            setDimAmount(0.5f)
+        }
+        dialog.show()
+    }
+
+    private fun showCategoriesDialog(uid: String) {
+        val ctx = requireContext()
+        val categoryRepo = CategoryRepository(uid)
+
+        val dialog = android.app.Dialog(ctx)
+        dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
+        dialog.setCanceledOnTouchOutside(true)
+
+        val root = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dpToPx(20), dpToPx(20), dpToPx(20), dpToPx(24))
+            background = android.graphics.drawable.GradientDrawable().apply {
+                setColor(ctx.getColor(R.color.bg_card))
+                cornerRadius = dpToPx(20).toFloat()
+            }
+        }
+
+        val tvTitle = TextView(ctx).apply {
+            text = "Categorias"
+            textSize = 18f
+            setTextColor(ctx.getColor(R.color.text_heading))
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).also { it.bottomMargin = dpToPx(4) }
+        }
+        root.addView(tvTitle)
+
+        val tvInfo = TextView(ctx).apply {
+            text = "Categorias usadas nos formulários de receita e despesa."
+            textSize = 13f
+            setTextColor(0xFF64748B.toInt())
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).also { it.bottomMargin = dpToPx(20) }
+        }
+        root.addView(tvInfo)
+
+        val containerEntries = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        root.addView(containerEntries)
+
+        data class CategoryRowRefs(
+            val etName: EditText,
+            val typeGetter: () -> String
+        )
+
+        fun addRow(name: String = "", type: String = "despesa") {
+            var currentType = if (type == "receita") "receita" else "despesa"
+
+            val row = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+                ).also { it.bottomMargin = dpToPx(12) }
+            }
+
+            val etName = EditText(ctx).apply {
+                hint = "Nome da categoria"
+                setText(name)
+                isSingleLine = true
+                setHintTextColor(ctx.getColor(R.color.text_hint))
+                setTextColor(ctx.getColor(R.color.text_heading))
+                background = androidx.core.content.ContextCompat.getDrawable(ctx, R.drawable.bg_outlined_input)
+                setPadding(dpToPx(12), dpToPx(14), dpToPx(12), dpToPx(14))
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                    .also { it.marginEnd = dpToPx(8) }
+            }
+
+            val btnTypeReceita = MaterialButton(ctx).apply {
+                text = "Receita"
+                textSize = 11f
+                cornerRadius = dpToPx(10)
+                layoutParams = LinearLayout.LayoutParams(dpToPx(74), dpToPx(38)).also { it.marginEnd = dpToPx(6) }
+            }
+            val btnTypeDespesa = MaterialButton(ctx).apply {
+                text = "Despesa"
+                textSize = 11f
+                cornerRadius = dpToPx(10)
+                layoutParams = LinearLayout.LayoutParams(dpToPx(74), dpToPx(38)).also { it.marginEnd = dpToPx(6) }
+            }
+
+            fun paintType() {
+                val activeColor  = ctx.getColor(R.color.primary)
+                val activeText   = ctx.getColor(R.color.on_primary)
+                val inactiveBg   = ctx.getColor(R.color.bg_card_subtle)
+                val inactiveText = ctx.getColor(R.color.text_secondary)
+                if (currentType == "receita") {
+                    btnTypeReceita.backgroundTintList = ColorStateList.valueOf(activeColor)
+                    btnTypeReceita.setTextColor(activeText)
+                    btnTypeDespesa.backgroundTintList = ColorStateList.valueOf(inactiveBg)
+                    btnTypeDespesa.setTextColor(inactiveText)
+                } else {
+                    btnTypeDespesa.backgroundTintList = ColorStateList.valueOf(activeColor)
+                    btnTypeDespesa.setTextColor(activeText)
+                    btnTypeReceita.backgroundTintList = ColorStateList.valueOf(inactiveBg)
+                    btnTypeReceita.setTextColor(inactiveText)
+                }
+            }
+            paintType()
+            btnTypeReceita.setOnClickListener { currentType = "receita"; paintType() }
+            btnTypeDespesa.setOnClickListener { currentType = "despesa"; paintType() }
+
+            val btnRemove = ImageButton(ctx).apply {
+                setImageDrawable(androidx.core.content.ContextCompat.getDrawable(ctx, R.drawable.ic_remove))
+                setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                layoutParams = LinearLayout.LayoutParams(dpToPx(40), dpToPx(40))
+                contentDescription = "Remover"
+                setOnClickListener { containerEntries.removeView(row) }
+            }
+
+            row.addView(etName)
+            row.addView(btnTypeReceita)
+            row.addView(btnTypeDespesa)
+            row.addView(btnRemove)
+            row.tag = CategoryRowRefs(etName) { currentType }
+            containerEntries.addView(row)
+        }
+
+        fun collectCategories(): CategoryConfig? {
+            val income = mutableListOf<String>()
+            val expense = mutableListOf<String>()
+            for (i in 0 until containerEntries.childCount) {
+                val refs = containerEntries.getChildAt(i).tag as? CategoryRowRefs ?: continue
+                val name = refs.etName.text.toString().trim()
+                if (name.isEmpty()) { refs.etName.error = "Informe um nome"; return null }
+                refs.etName.error = null
+                if (refs.typeGetter() == "receita") income.add(name) else expense.add(name)
+            }
+            return CategoryConfig(
+                income = income.distinctBy { it.lowercase() },
+                expense = expense.distinctBy { it.lowercase() }
+            )
+        }
+
+        val btnAddEntry = MaterialButton(ctx).apply {
+            text = "+ Adicionar categoria"
+            textSize = 13f
+            setBackgroundColor(primaryBlue)
+            setTextColor(0xFFFFFFFF.toInt())
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).also { it.topMargin = dpToPx(4); it.bottomMargin = dpToPx(20) }
+        }
+        root.addView(btnAddEntry)
+
+        val btnRow = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        val btnCancel = MaterialButton(
+            ctx, null,
+            com.google.android.material.R.attr.borderlessButtonStyle
+        ).apply {
+            text = "Cancelar"
+            setTextColor(0xFF64748B.toInt())
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+
+        val btnSave = MaterialButton(ctx).apply {
+            text = "Salvar"
+            setBackgroundColor(primaryBlue)
+            setTextColor(0xFFFFFFFF.toInt())
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                .also { it.marginStart = dpToPx(8) }
+        }
+
+        btnRow.addView(btnCancel)
+        btnRow.addView(btnSave)
+        root.addView(btnRow)
+
+        categoryRepo.loadConfig { config ->
+            containerEntries.removeAllViews()
+            config.income.forEach { addRow(it, "receita") }
+            config.expense.forEach { addRow(it, "despesa") }
+        }
+
+        btnAddEntry.setOnClickListener { addRow() }
+        btnCancel.setOnClickListener { dialog.dismiss() }
+        btnSave.setOnClickListener {
+            val config = collectCategories() ?: return@setOnClickListener
+            categoryRepo.saveConfig(config)
+                .addOnSuccessListener {
+                    Toast.makeText(ctx, "Categorias salvas!", Toast.LENGTH_SHORT).show()
+                    dialog.dismiss()
+                }
+                .addOnFailureListener {
+                    Toast.makeText(ctx, "Erro: ${it.message}", Toast.LENGTH_LONG).show()
+                }
+        }
+
+        // Frame full-screen transparente — toque fora fecha o dialog. Rola porque a
+        // lista de categorias pode ser mais longa que a tela.
+        val frame = FrameLayout(ctx).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+            setOnClickListener { dialog.dismiss() }
+        }
+        val scrollWrapper = ScrollView(ctx).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+            val h = dpToPx(24)
+            val w = dpToPx(20)
+            setPadding(w, h, w, h)
+            clipToPadding = false
+            setOnClickListener { /* consome o toque para não fechar */ }
+        }
+        root.layoutParams = ScrollView.LayoutParams(
+            ScrollView.LayoutParams.MATCH_PARENT,
+            ScrollView.LayoutParams.WRAP_CONTENT
+        )
+        scrollWrapper.addView(root)
+        frame.addView(scrollWrapper)
+
+        dialog.setContentView(frame)
+        dialog.window?.apply {
+            setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+            setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+            setLayout(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT
+            )
+            addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            setDimAmount(0.5f)
+        }
+        dialog.show()
+    }
+
+    private fun showGoalsDialog(uid: String) {
+        val ctx = requireContext()
+        val goalRepo = GoalRepository(uid)
+        val categoryRepo = CategoryRepository(uid)
+
+        val dialog = android.app.Dialog(ctx)
+        dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
+        dialog.setCanceledOnTouchOutside(true)
+
+        val root = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dpToPx(20), dpToPx(20), dpToPx(20), dpToPx(24))
+            background = android.graphics.drawable.GradientDrawable().apply {
+                setColor(ctx.getColor(R.color.bg_card))
+                cornerRadius = dpToPx(20).toFloat()
+            }
+        }
+
+        val tvTitle = TextView(ctx).apply {
+            text = "Metas"
+            textSize = 18f
+            setTextColor(ctx.getColor(R.color.text_heading))
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).also { it.bottomMargin = dpToPx(4) }
+        }
+        root.addView(tvTitle)
+
+        val tvInfo = TextView(ctx).apply {
+            text = "Defina limites de gasto por mês, gerais ou por categoria. O progresso aparece em Relatórios."
+            textSize = 13f
+            setTextColor(0xFF64748B.toInt())
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).also { it.bottomMargin = dpToPx(20) }
+        }
+        root.addView(tvInfo)
+
+        val containerEntries = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        root.addView(containerEntries)
+
+        data class GoalRowRefs(
+            val id: String,
+            val spCategory: Spinner,
+            val etAmount: EditText,
+            val categoryValues: List<String>
+        )
+
+        var expenseCategories = listOf<String>()
+
+        fun addRow(goal: Goal? = null) {
+            val rowId = goal?.id?.takeIf { it.isNotBlank() } ?: java.util.UUID.randomUUID().toString()
+
+            val row = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+                ).also { it.bottomMargin = dpToPx(12) }
+            }
+
+            val categoryLabels = listOf("Geral (todas as despesas)") + expenseCategories
+            val categoryValues = listOf("") + expenseCategories
+
+            val spCategory = Spinner(ctx).apply {
+                adapter = ArrayAdapter(ctx, android.R.layout.simple_spinner_dropdown_item, categoryLabels)
+                background = androidx.core.content.ContextCompat.getDrawable(ctx, R.drawable.bg_spinner)
+                setPadding(dpToPx(10), 0, dpToPx(10), 0)
+                layoutParams = LinearLayout.LayoutParams(0, dpToPx(44), 1f).also { it.marginEnd = dpToPx(8) }
+            }
+            val selIdx = categoryValues.indexOf(goal?.category ?: "").let { if (it >= 0) it else 0 }
+            spCategory.setSelection(selIdx)
+
+            val etAmount = EditText(ctx).apply {
+                hint = "Valor alvo (R$)"
+                setText(if ((goal?.targetAmount ?: 0.0) > 0) "%.2f".format(goal!!.targetAmount) else "")
+                inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+                isSingleLine = true
+                setHintTextColor(ctx.getColor(R.color.text_hint))
+                setTextColor(ctx.getColor(R.color.text_heading))
+                background = androidx.core.content.ContextCompat.getDrawable(ctx, R.drawable.bg_outlined_input)
+                setPadding(dpToPx(12), dpToPx(14), dpToPx(12), dpToPx(14))
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                    .also { it.marginEnd = dpToPx(8) }
+            }
+
+            val btnRemove = ImageButton(ctx).apply {
+                setImageDrawable(androidx.core.content.ContextCompat.getDrawable(ctx, R.drawable.ic_remove))
+                setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                layoutParams = LinearLayout.LayoutParams(dpToPx(40), dpToPx(40))
+                contentDescription = "Remover"
+                setOnClickListener { containerEntries.removeView(row) }
+            }
+
+            row.addView(spCategory)
+            row.addView(etAmount)
+            row.addView(btnRemove)
+            row.tag = GoalRowRefs(rowId, spCategory, etAmount, categoryValues)
+            containerEntries.addView(row)
+        }
+
+        fun collectGoals(): List<Goal>? {
+            val result = mutableListOf<Goal>()
+            for (i in 0 until containerEntries.childCount) {
+                val refs = containerEntries.getChildAt(i).tag as? GoalRowRefs ?: continue
+                val amount = parseAmountPtBr(refs.etAmount.text.toString())
+                if (amount == null || amount <= 0.0) { refs.etAmount.error = "Valor inválido"; return null }
+                refs.etAmount.error = null
+                val category = refs.categoryValues.getOrElse(refs.spCategory.selectedItemPosition) { "" }
+                result.add(Goal(id = refs.id, category = category, targetAmount = amount, period = "mensal"))
+            }
+            return result
+        }
+
+        val btnAddEntry = MaterialButton(ctx).apply {
+            text = "+ Adicionar meta"
+            textSize = 13f
+            setBackgroundColor(primaryBlue)
+            setTextColor(0xFFFFFFFF.toInt())
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).also { it.topMargin = dpToPx(4); it.bottomMargin = dpToPx(20) }
+        }
+        root.addView(btnAddEntry)
+
+        val btnRow = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+
+        val btnCancel = MaterialButton(
+            ctx, null,
+            com.google.android.material.R.attr.borderlessButtonStyle
+        ).apply {
+            text = "Cancelar"
+            setTextColor(0xFF64748B.toInt())
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+
+        val btnSave = MaterialButton(ctx).apply {
+            text = "Salvar"
+            setBackgroundColor(primaryBlue)
+            setTextColor(0xFFFFFFFF.toInt())
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                .also { it.marginStart = dpToPx(8) }
+        }
+
+        btnRow.addView(btnCancel)
+        btnRow.addView(btnSave)
+        root.addView(btnRow)
+
+        categoryRepo.loadConfig { catConfig ->
+            expenseCategories = catConfig.expense
+            goalRepo.loadConfig { goalConfig ->
+                containerEntries.removeAllViews()
+                goalConfig.items.forEach { addRow(it) }
+            }
+        }
+
+        btnAddEntry.setOnClickListener { addRow() }
+        btnCancel.setOnClickListener { dialog.dismiss() }
+        btnSave.setOnClickListener {
+            val goals = collectGoals() ?: return@setOnClickListener
+            goalRepo.saveConfig(GoalConfig(items = goals))
+                .addOnSuccessListener {
+                    Toast.makeText(ctx, "Metas salvas!", Toast.LENGTH_SHORT).show()
+                    dialog.dismiss()
+                }
+                .addOnFailureListener {
+                    Toast.makeText(ctx, "Erro: ${it.message}", Toast.LENGTH_LONG).show()
+                }
+        }
+
+        // Frame full-screen transparente — toque fora fecha o dialog. Rola porque a
+        // lista de metas pode ser mais longa que a tela.
         val frame = FrameLayout(ctx).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,

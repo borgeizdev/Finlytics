@@ -12,6 +12,8 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
+import com.borgeiz.meutcc2026.data.CategoryRepository
+import com.borgeiz.meutcc2026.model.CategoryConfig
 import com.borgeiz.meutcc2026.model.PaymentMethods
 import com.borgeiz.meutcc2026.model.Transaction
 import com.borgeiz.meutcc2026.util.parseAmountPtBr
@@ -21,15 +23,7 @@ import java.util.Calendar
 
 class AddTransactionFragment : Fragment() {
 
-    private val incomeCategories = listOf(
-        "Salario", "Freelance", "Investimentos",
-        "Venda", "Presente", "Reembolso", "Outros"
-    )
-    private val expenseCategories = listOf(
-        "Alimentacao", "Transporte", "Moradia",
-        "Contas", "Saude", "Lazer",
-        "Educacao", "Compras", "Assinaturas", "Outros"
-    )
+    private var categoryConfig = CategoryConfig()
 
     private var selectedType = "receita"
 
@@ -63,6 +57,14 @@ class AddTransactionFragment : Fragment() {
         val btnSave       = view.findViewById<MaterialButton>(R.id.btnSaveTransaction)
 
         setType("receita")
+
+        FirebaseAuth.getInstance().currentUser?.uid?.let { uid ->
+            CategoryRepository(uid).loadConfig { config ->
+                if (!isAdded) return@loadConfig
+                categoryConfig = config
+                setType(selectedType)
+            }
+        }
 
         btnTypeReceita.setOnClickListener { setType("receita") }
         btnTypeDespesa.setOnClickListener { setType("despesa") }
@@ -150,9 +152,9 @@ class AddTransactionFragment : Fragment() {
             btnTypeReceita.setStrokeColor(ColorStateList.valueOf(borderColor))
         }
 
-        val cats = if (type == "receita") incomeCategories else expenseCategories
+        val cats = if (type == "receita") categoryConfig.income else categoryConfig.expense
         val adapter = ArrayAdapter(ctx, android.R.layout.simple_dropdown_item_1line, cats)
         actvCategory.setAdapter(adapter)
-        actvCategory.setText(cats[0], false)
+        actvCategory.setText(cats.firstOrNull() ?: "", false)
     }
 }

@@ -15,11 +15,14 @@ import android.widget.Spinner
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import com.borgeiz.meutcc2026.data.GoalRepository
 import com.borgeiz.meutcc2026.data.TransactionsRepository
 import com.borgeiz.meutcc2026.data.expenseTotal
 import com.borgeiz.meutcc2026.data.incomeTotal
+import com.borgeiz.meutcc2026.model.Goal
 import com.borgeiz.meutcc2026.model.Transaction
 import com.borgeiz.meutcc2026.util.buildBreakdownRows
+import com.borgeiz.meutcc2026.util.categoryTotalsForMonth
 import com.borgeiz.meutcc2026.util.chartPaletteHex
 import com.borgeiz.meutcc2026.util.isDarkMode
 import com.borgeiz.meutcc2026.util.setupBreakdownPieChart
@@ -60,12 +63,17 @@ class ReportsFragment : Fragment() {
 
     private var txRepoRef: TransactionsRepository? = null
     private var txListenerRef: ValueEventListener? = null
+    private var goalRepoRef: GoalRepository? = null
+    private var goalListenerRef: ValueEventListener? = null
 
     override fun onDestroyView() {
         super.onDestroyView()
         txRepoRef?.let { repo -> txListenerRef?.let { repo.removeObserver(it) } }
         txRepoRef = null
         txListenerRef = null
+        goalRepoRef?.let { repo -> goalListenerRef?.let { repo.removeObserver(it) } }
+        goalRepoRef = null
+        goalListenerRef = null
     }
 
     override fun onCreateView(
@@ -95,6 +103,7 @@ class ReportsFragment : Fragment() {
         val llCategoryVariation = view.findViewById<LinearLayout>(R.id.llCategoryVariation)
         val weekdayChart       = view.findViewById<BarChart>(R.id.weekdayChart)
         val tvWeekdayEmpty     = view.findViewById<TextView>(R.id.tvWeekdayEmpty)
+        val llGoalsProgress    = view.findViewById<LinearLayout>(R.id.llGoalsProgress)
         weekdayChart.setNoDataText("")
 
         btnPaymentMethodAnalysis.setOnClickListener {
@@ -122,6 +131,7 @@ class ReportsFragment : Fragment() {
 
         var allTransactions = listOf<Transaction>()
         var adjustment = 0.0
+        var goals = listOf<Goal>()
 
         fun refreshCategoryChart(monthFilter: Int) {
             val expenses = allTransactions.filter { t ->
@@ -247,6 +257,16 @@ class ReportsFragment : Fragment() {
             }
         }
 
+        fun refreshGoalsProgress() {
+            if (!isAdded) return
+            val cal = Calendar.getInstance()
+            val curYear  = cal.get(Calendar.YEAR)
+            val curMonth = cal.get(Calendar.MONTH) + 1
+            val categoryTotals = allTransactions.categoryTotalsForMonth("despesa", curYear, curMonth)
+            val overallTotal = categoryTotals.values.sum()
+            buildGoalsProgress(llGoalsProgress, goals, categoryTotals, overallTotal)
+        }
+
         fun renderSummary() {
             val totalIncome  = allTransactions.incomeTotal()
             val totalExpense = allTransactions.expenseTotal()
@@ -258,6 +278,7 @@ class ReportsFragment : Fragment() {
             setupBarChart(barChart, allTransactions)
             refreshCategoryChart(spCatMonth.selectedItemPosition)
             refreshInsights()
+            refreshGoalsProgress()
         }
 
         spCatMonth.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
@@ -280,6 +301,14 @@ class ReportsFragment : Fragment() {
             if (!isAdded) return@observe
             allTransactions = transactions
             renderSummary()
+        }
+
+        val goalRepo = GoalRepository(uid)
+        goalRepoRef = goalRepo
+        goalListenerRef = goalRepo.observe { config ->
+            if (!isAdded) return@observe
+            goals = config.items
+            refreshGoalsProgress()
         }
 
         return view
@@ -366,6 +395,110 @@ class ReportsFragment : Fragment() {
             row.addView(dot)
             row.addView(textBlock)
             row.addView(tvDelta)
+            container.addView(row)
+        }
+    }
+
+    private fun buildGoalsProgress(
+        container: LinearLayout,
+        goals: List<Goal>,
+        categoryTotals: Map<String, Double>,
+        overallTotal: Double
+    ) {
+        val ctx = requireContext()
+        val dp  = ctx.resources.displayMetrics.density
+        container.removeAllViews()
+
+        if (goals.isEmpty()) {
+            container.addView(TextView(ctx).apply {
+                text = "Nenhuma meta configurada. Adicione em Perfil > Configurações > Metas."
+                setTextColor(ContextCompat.getColor(ctx, R.color.text_hint))
+                textSize = 14f
+            })
+            return
+        }
+
+        val isDark = isDarkMode(ctx)
+        val trackColor = if (isDark) Color.parseColor("#1E293B") else Color.parseColor("#E2E8F0")
+
+        goals.forEachIndexed { idx, goal ->
+            val spent = if (goal.category.isBlank()) overallTotal else (categoryTotals[goal.category] ?: 0.0)
+            val pct = if (goal.targetAmount > 0) (spent / goal.targetAmount * 100.0) else 0.0
+            val label = goal.category.ifBlank { "Geral (todas as despesas)" }
+            val isLast = idx == goals.size - 1
+
+            val barColor = when {
+                pct >= 100.0 -> ContextCompat.getColor(ctx, R.color.expense)
+                pct >= 80.0  -> Color.parseColor("#D97706")
+                else         -> ContextCompat.getColor(ctx, R.color.income)
+            }
+
+            val row = LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { if (!isLast) bottomMargin = (16 * dp).toInt() }
+            }
+
+            val topRow = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { bottomMargin = (6 * dp).toInt() }
+            }
+            topRow.addView(TextView(ctx).apply {
+                text = label
+                textSize = 13f
+                setTypeface(null, Typeface.BOLD)
+                setTextColor(ContextCompat.getColor(ctx, R.color.text_heading))
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            })
+            topRow.addView(TextView(ctx).apply {
+                text = "${"%.0f".format(pct)}%"
+                textSize = 12.5f
+                setTypeface(null, Typeface.BOLD)
+                setTextColor(barColor)
+            })
+
+            val tvValues = TextView(ctx).apply {
+                text = "R$ ${"%.2f".format(spent)} de R$ ${"%.2f".format(goal.targetAmount)}"
+                textSize = 11f
+                setTextColor(ContextCompat.getColor(ctx, R.color.text_hint))
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { bottomMargin = (6 * dp).toInt() }
+            }
+
+            val track = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, (7 * dp).toInt()
+                )
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = 3.5f * dp
+                    setColor(trackColor)
+                }
+            }
+            val fillPct = pct.toFloat().coerceIn(0f, 100f)
+            val fill = View(ctx).apply {
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, fillPct.coerceAtLeast(1f))
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = 3.5f * dp
+                    setColor(barColor)
+                }
+            }
+            val rest = View(ctx).apply {
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, (100f - fillPct).coerceAtLeast(0f))
+            }
+            track.addView(fill)
+            track.addView(rest)
+
+            row.addView(topRow)
+            row.addView(tvValues)
+            row.addView(track)
             container.addView(row)
         }
     }
