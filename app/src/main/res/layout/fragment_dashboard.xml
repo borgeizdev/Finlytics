@@ -126,6 +126,16 @@
                         android:textSize="17sp"
                         android:textStyle="bold" />
 
+                    <TextView
+                        android:id="@+id/tvIncomeTrend"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:text=""
+                        android:textColor="@color/text_hint"
+                        android:textSize="11sp"
+                        android:textStyle="bold" />
+
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
@@ -174,6 +184,16 @@
                         android:text="R$ 0,00"
                         android:textColor="@color/expense"
                         android:textSize="17sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvExpenseTrend"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:text=""
+                        android:textColor="@color/text_hint"
+                        android:textSize="11sp"
                         android:textStyle="bold" />
 
                 </LinearLayout>

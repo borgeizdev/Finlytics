@@ -1,11 +1,13 @@
 package com.borgeiz.meutcc2026
 
+import android.app.DatePickerDialog
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.EditText
 import android.widget.Spinner
 import android.widget.TextView
 import androidx.fragment.app.Fragment
@@ -13,6 +15,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.borgeiz.meutcc2026.adapter.TransactionAdapter
 import com.borgeiz.meutcc2026.data.TransactionsRepository
+import com.borgeiz.meutcc2026.model.PaymentMethods
 import com.borgeiz.meutcc2026.model.Transaction
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.ValueEventListener
@@ -23,6 +26,10 @@ class TransactionsFragment : Fragment() {
     private lateinit var recycler: RecyclerView
     private lateinit var spFilterType: Spinner
     private lateinit var spFilterMonth: Spinner
+    private lateinit var spFilterCategory: Spinner
+    private lateinit var spFilterPayment: Spinner
+    private lateinit var etFilterStartDate: EditText
+    private lateinit var etFilterEndDate: EditText
     private val allTransactions = mutableListOf<Transaction>()
 
     private var txRepo: TransactionsRepository? = null
@@ -35,6 +42,8 @@ class TransactionsFragment : Fragment() {
         "Setembro", "Outubro", "Novembro", "Dezembro"
     )
 
+    private val paymentFilterOptions = listOf("Todas") + PaymentMethods.ALL + listOf(PaymentMethods.NAO_INFORMADO)
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -42,9 +51,14 @@ class TransactionsFragment : Fragment() {
     ): View {
         val view = inflater.inflate(R.layout.fragment_transactions, container, false)
 
-        recycler      = view.findViewById(R.id.recyclerTransactions)
-        spFilterType  = view.findViewById(R.id.spFilterType)
-        spFilterMonth = view.findViewById(R.id.spFilterMonth)
+        recycler          = view.findViewById(R.id.recyclerTransactions)
+        spFilterType      = view.findViewById(R.id.spFilterType)
+        spFilterMonth     = view.findViewById(R.id.spFilterMonth)
+        spFilterCategory  = view.findViewById(R.id.spFilterCategory)
+        spFilterPayment   = view.findViewById(R.id.spFilterPayment)
+        etFilterStartDate = view.findViewById(R.id.etFilterStartDate)
+        etFilterEndDate   = view.findViewById(R.id.etFilterEndDate)
+        val btnClearDateFilter = view.findViewById<TextView>(R.id.btnClearDateFilter)
 
         recycler.layoutManager = LinearLayoutManager(requireContext())
 
@@ -64,12 +78,47 @@ class TransactionsFragment : Fragment() {
         )
         spFilterMonth.setSelection(currentMonth)
 
+        spFilterPayment.adapter = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_spinner_dropdown_item,
+            paymentFilterOptions
+        )
+
         val filterListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, v: View?, pos: Int, id: Long) = applyFilter()
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
-        spFilterType.onItemSelectedListener  = filterListener
-        spFilterMonth.onItemSelectedListener = filterListener
+        spFilterType.onItemSelectedListener     = filterListener
+        spFilterMonth.onItemSelectedListener    = filterListener
+        spFilterCategory.onItemSelectedListener = filterListener
+        spFilterPayment.onItemSelectedListener  = filterListener
+
+        fun pickDate(field: EditText) {
+            val parts = field.text?.toString()?.split("-")
+            val cal = Calendar.getInstance()
+            if (parts != null && parts.size == 3) {
+                parts[0].toIntOrNull()?.let { cal.set(Calendar.YEAR, it) }
+                parts[1].toIntOrNull()?.let { cal.set(Calendar.MONTH, it - 1) }
+                parts[2].toIntOrNull()?.let { cal.set(Calendar.DAY_OF_MONTH, it) }
+            }
+            DatePickerDialog(
+                requireContext(),
+                { _, y, m, d ->
+                    field.setText("%d-%02d-%02d".format(y, m + 1, d))
+                    applyFilter()
+                },
+                cal.get(Calendar.YEAR),
+                cal.get(Calendar.MONTH),
+                cal.get(Calendar.DAY_OF_MONTH)
+            ).show()
+        }
+        etFilterStartDate.setOnClickListener { pickDate(etFilterStartDate) }
+        etFilterEndDate.setOnClickListener { pickDate(etFilterEndDate) }
+        btnClearDateFilter.setOnClickListener {
+            etFilterStartDate.text?.clear()
+            etFilterEndDate.text?.clear()
+            applyFilter()
+        }
 
         loadTransactions()
         return view
@@ -91,8 +140,21 @@ class TransactionsFragment : Fragment() {
             allTransactions.clear()
             allTransactions.addAll(transactions)
             allTransactions.sortByDescending { it.date }
+            refreshCategoryOptions()
             applyFilter()
         }
+    }
+
+    private fun refreshCategoryOptions() {
+        val current = spFilterCategory.selectedItem?.toString()
+        val categories = listOf("Todas") + allTransactions.map { it.category.ifBlank { "Outros" } }.distinct().sorted()
+        spFilterCategory.adapter = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_spinner_dropdown_item,
+            categories
+        )
+        val idx = current?.let { categories.indexOf(it) } ?: -1
+        spFilterCategory.setSelection(if (idx >= 0) idx else 0)
     }
 
     private fun applyFilter() {
@@ -100,6 +162,12 @@ class TransactionsFragment : Fragment() {
 
         val typePos  = spFilterType.selectedItemPosition   // 0=Todos, 1=Receitas, 2=Despesas
         val monthPos = spFilterMonth.selectedItemPosition  // 0=Todos, 1-12=mês
+        val categoryPos = spFilterCategory.selectedItemPosition
+        val paymentPos  = spFilterPayment.selectedItemPosition
+        val selectedCategory = spFilterCategory.selectedItem?.toString()
+        val selectedPayment  = spFilterPayment.selectedItem?.toString()
+        val startDate = etFilterStartDate.text?.toString()?.trim().orEmpty()
+        val endDate   = etFilterEndDate.text?.toString()?.trim().orEmpty()
 
         val filtered = allTransactions.filter { t ->
             val typeOk = when (typePos) {
@@ -107,14 +175,22 @@ class TransactionsFragment : Fragment() {
                 2 -> t.type == "despesa"
                 else -> true
             }
-            val monthOk = if (monthPos == 0) {
+            // Intervalo customizado tem prioridade sobre o filtro de mês quando preenchido
+            val dateOk = if (startDate.isNotEmpty() || endDate.isNotEmpty()) {
+                (startDate.isEmpty() || t.date >= startDate) && (endDate.isEmpty() || t.date <= endDate)
+            } else if (monthPos == 0) {
                 true
             } else {
                 // date formato "yyyy-MM-dd"
                 val parts = t.date.split("-")
                 parts.size >= 2 && parts[1].toIntOrNull() == monthPos
             }
-            typeOk && monthOk
+            val categoryOk = categoryPos == 0 ||
+                t.category.ifBlank { "Outros" }.equals(selectedCategory, ignoreCase = true)
+            val paymentOk = paymentPos == 0 ||
+                t.paymentMethod.ifBlank { PaymentMethods.NAO_INFORMADO }.equals(selectedPayment, ignoreCase = true)
+
+            typeOk && dateOk && categoryOk && paymentOk
         }
 
         val tvEmpty = view?.findViewById<TextView>(R.id.tvEmptyTransactions)
