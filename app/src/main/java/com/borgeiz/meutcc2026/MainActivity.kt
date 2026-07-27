@@ -8,7 +8,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import com.borgeiz.meutcc2026.data.SalaryRepository
+import com.borgeiz.meutcc2026.data.RecurringRepository
 import com.google.firebase.auth.FirebaseAuth
 
 class MainActivity : AppCompatActivity() {
@@ -80,7 +80,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        checkAndPostSalaryIfNeeded()
+        checkAndPostRecurringIfNeeded()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -140,11 +140,11 @@ class MainActivity : AppCompatActivity() {
         activeIcon?.imageTintList = ColorStateList.valueOf(activeColor)
     }
 
-    private fun checkAndPostSalaryIfNeeded() {
+    private fun checkAndPostRecurringIfNeeded() {
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
-        val salaryRepo = SalaryRepository(uid)
-        salaryRepo.loadConfig { config ->
-            if (config != null) salaryRepo.checkAndPostSalaryIfNeeded(config)
+        val recurringRepo = RecurringRepository(uid)
+        recurringRepo.loadConfig { config ->
+            if (config != null) recurringRepo.checkAndPostIfNeeded(config)
         }
     }
 }

@@ -10,5 +10,6 @@ data class Transaction(
     var category: String = "",
     var date: String = "",
     var description: String = "",
-    var paymentMethod: String = ""
+    var paymentMethod: String = "",
+    var recurringId: String = ""
 )

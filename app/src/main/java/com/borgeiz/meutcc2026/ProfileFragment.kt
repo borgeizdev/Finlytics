@@ -10,9 +10,9 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.*
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.fragment.app.Fragment
-import com.borgeiz.meutcc2026.data.SalaryRepository
-import com.borgeiz.meutcc2026.model.SalaryConfig
-import com.borgeiz.meutcc2026.model.SalaryEntry
+import com.borgeiz.meutcc2026.data.RecurringRepository
+import com.borgeiz.meutcc2026.model.RecurringConfig
+import com.borgeiz.meutcc2026.model.RecurringItem
 import com.borgeiz.meutcc2026.util.parseAmountPtBr
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
@@ -100,7 +100,7 @@ class ProfileFragment : Fragment() {
         val menuItems = listOf(
             MenuItem(R.drawable.ic_person,    R.color.primary, R.color.settings_badge_profile, "Configurações do perfil",   "Editar nome de usuário"),
             MenuItem(R.drawable.ic_palette,   R.color.primary, R.color.settings_badge_display, "Configurações de exibição", "Tema claro, escuro ou sistema"),
-            MenuItem(R.drawable.ic_wallet,    R.color.income,  R.color.settings_badge_salary,  "Receita fixa",               "Salário e entradas automáticas")
+            MenuItem(R.drawable.ic_wallet,    R.color.income,  R.color.settings_badge_salary,  "Recorrências",               "Salário, assinaturas e contas fixas")
         )
 
         val dialog = AlertDialog.Builder(ctx)
@@ -123,7 +123,7 @@ class ProfileFragment : Fragment() {
                     when (index) {
                         0 -> showEditProfileDialog()
                         1 -> showDisplaySettingsDialog()
-                        2 -> showSalaryConfigDialog(uid)
+                        2 -> showRecurringItemsDialog(uid)
                     }
                 }
             }
@@ -289,9 +289,9 @@ class ProfileFragment : Fragment() {
             }
     }
 
-    private fun showSalaryConfigDialog(uid: String) {
+    private fun showRecurringItemsDialog(uid: String) {
         val ctx = requireContext()
-        val salaryRepo = SalaryRepository(uid)
+        val recurringRepo = RecurringRepository(uid)
 
         val dialog = android.app.Dialog(ctx)
         dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
@@ -307,7 +307,7 @@ class ProfileFragment : Fragment() {
         }
 
         val tvTitle = TextView(ctx).apply {
-            text = "Receita fixa"
+            text = "Recorrências"
             textSize = 18f
             setTextColor(ctx.getColor(R.color.text_heading))
             setTypeface(null, android.graphics.Typeface.BOLD)
@@ -319,7 +319,7 @@ class ProfileFragment : Fragment() {
         root.addView(tvTitle)
 
         val tvInfo = TextView(ctx).apply {
-            text = "Configure os valores que entram fixo na sua conta. O dia é opcional."
+            text = "Receitas e despesas que se repetem todo mês (salário, assinaturas, aluguel etc.)."
             textSize = 13f
             setTextColor(0xFF64748B.toInt())
             layoutParams = LinearLayout.LayoutParams(
@@ -334,22 +334,39 @@ class ProfileFragment : Fragment() {
         }
         root.addView(containerEntries)
 
-        fun addRow(day: Int = 0, amount: Double = 0.0) {
+        data class RowRefs(
+            val id: String,
+            val etTitle: EditText,
+            val etCategory: EditText,
+            val etAmount: EditText,
+            val etDay: EditText,
+            val typeGetter: () -> String
+        )
+
+        fun addRow(item: RecurringItem? = null) {
+            var currentType = item?.type?.takeIf { it == "receita" || it == "despesa" } ?: "receita"
+            val rowId = item?.id?.takeIf { it.isNotBlank() } ?: java.util.UUID.randomUUID().toString()
+
             val row = LinearLayout(ctx).apply {
-                orientation = LinearLayout.HORIZONTAL
-                gravity = Gravity.CENTER_VERTICAL
+                orientation = LinearLayout.VERTICAL
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
-                ).also { it.bottomMargin = dpToPx(12) }
+                ).also { it.bottomMargin = dpToPx(16) }
             }
 
-            val etDay = EditText(ctx).apply {
-                hint = "Dia"
-                setText(if (day > 0) day.toString() else "")
-                inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            val topRow = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+                ).also { it.bottomMargin = dpToPx(8) }
+            }
+
+            val etTitle = EditText(ctx).apply {
+                hint = "Título (ex: Salário, Netflix)"
+                setText(item?.title ?: "")
                 isSingleLine = true
-                gravity = Gravity.CENTER
                 setHintTextColor(ctx.getColor(R.color.text_hint))
                 setTextColor(ctx.getColor(R.color.text_heading))
                 background = androidx.core.content.ContextCompat.getDrawable(ctx, R.drawable.bg_outlined_input)
@@ -358,9 +375,81 @@ class ProfileFragment : Fragment() {
                     .also { it.marginEnd = dpToPx(8) }
             }
 
+            val btnRemove = ImageButton(ctx).apply {
+                setImageDrawable(androidx.core.content.ContextCompat.getDrawable(ctx, R.drawable.ic_remove))
+                setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                layoutParams = LinearLayout.LayoutParams(dpToPx(44), dpToPx(44))
+                contentDescription = "Remover"
+                setOnClickListener { containerEntries.removeView(row) }
+            }
+
+            topRow.addView(etTitle)
+            topRow.addView(btnRemove)
+
+            val btnTypeReceita = MaterialButton(ctx).apply {
+                text = "Receita"
+                textSize = 12f
+                cornerRadius = dpToPx(10)
+                layoutParams = LinearLayout.LayoutParams(0, dpToPx(38), 1f).also { it.marginEnd = dpToPx(6) }
+            }
+            val btnTypeDespesa = MaterialButton(ctx).apply {
+                text = "Despesa"
+                textSize = 12f
+                cornerRadius = dpToPx(10)
+                layoutParams = LinearLayout.LayoutParams(0, dpToPx(38), 1f)
+            }
+
+            fun paintType() {
+                val activeColor  = ctx.getColor(R.color.primary)
+                val activeText   = ctx.getColor(R.color.on_primary)
+                val inactiveBg   = ctx.getColor(R.color.bg_card_subtle)
+                val inactiveText = ctx.getColor(R.color.text_secondary)
+                if (currentType == "receita") {
+                    btnTypeReceita.backgroundTintList = ColorStateList.valueOf(activeColor)
+                    btnTypeReceita.setTextColor(activeText)
+                    btnTypeDespesa.backgroundTintList = ColorStateList.valueOf(inactiveBg)
+                    btnTypeDespesa.setTextColor(inactiveText)
+                } else {
+                    btnTypeDespesa.backgroundTintList = ColorStateList.valueOf(activeColor)
+                    btnTypeDespesa.setTextColor(activeText)
+                    btnTypeReceita.backgroundTintList = ColorStateList.valueOf(inactiveBg)
+                    btnTypeReceita.setTextColor(inactiveText)
+                }
+            }
+            paintType()
+            btnTypeReceita.setOnClickListener { currentType = "receita"; paintType() }
+            btnTypeDespesa.setOnClickListener { currentType = "despesa"; paintType() }
+
+            val typeRow = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+                ).also { it.bottomMargin = dpToPx(8) }
+            }
+            typeRow.addView(btnTypeReceita)
+            typeRow.addView(btnTypeDespesa)
+
+            val bottomRow = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+            }
+
+            val etCategory = EditText(ctx).apply {
+                hint = "Categoria"
+                setText(item?.category ?: "")
+                isSingleLine = true
+                setHintTextColor(ctx.getColor(R.color.text_hint))
+                setTextColor(ctx.getColor(R.color.text_heading))
+                background = androidx.core.content.ContextCompat.getDrawable(ctx, R.drawable.bg_outlined_input)
+                setPadding(dpToPx(12), dpToPx(14), dpToPx(12), dpToPx(14))
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 2f)
+                    .also { it.marginEnd = dpToPx(8) }
+            }
             val etAmount = EditText(ctx).apply {
                 hint = "Valor (R$)"
-                setText(if (amount > 0) "%.2f".format(amount) else "")
+                setText(if ((item?.amount ?: 0.0) > 0) "%.2f".format(item!!.amount) else "")
                 inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
                 isSingleLine = true
                 setHintTextColor(ctx.getColor(R.color.text_hint))
@@ -370,52 +459,67 @@ class ProfileFragment : Fragment() {
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 2f)
                     .also { it.marginEnd = dpToPx(8) }
             }
-
-            val btnRemove = ImageButton(ctx).apply {
-                setImageDrawable(androidx.core.content.ContextCompat.getDrawable(ctx, R.drawable.ic_remove))
-                setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                layoutParams = LinearLayout.LayoutParams(dpToPx(44), dpToPx(44))
-                    .also { it.gravity = Gravity.CENTER_VERTICAL }
-                contentDescription = "Remover"
-                setOnClickListener { containerEntries.removeView(row) }
+            val etDay = EditText(ctx).apply {
+                hint = "Dia"
+                setText(if ((item?.dayOfMonth ?: 0) > 0) item!!.dayOfMonth.toString() else "")
+                inputType = android.text.InputType.TYPE_CLASS_NUMBER
+                isSingleLine = true
+                gravity = Gravity.CENTER
+                setHintTextColor(ctx.getColor(R.color.text_hint))
+                setTextColor(ctx.getColor(R.color.text_heading))
+                background = androidx.core.content.ContextCompat.getDrawable(ctx, R.drawable.bg_outlined_input)
+                setPadding(dpToPx(12), dpToPx(14), dpToPx(12), dpToPx(14))
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             }
 
-            row.addView(etDay)
-            row.addView(etAmount)
-            row.addView(btnRemove)
+            bottomRow.addView(etCategory)
+            bottomRow.addView(etAmount)
+            bottomRow.addView(etDay)
+
+            row.addView(topRow)
+            row.addView(typeRow)
+            row.addView(bottomRow)
+            row.tag = RowRefs(rowId, etTitle, etCategory, etAmount, etDay) { currentType }
             containerEntries.addView(row)
         }
 
-        fun collectEntries(): List<SalaryEntry>? {
-            val result = mutableListOf<SalaryEntry>()
+        fun collectEntries(): List<RecurringItem>? {
+            val result = mutableListOf<RecurringItem>()
             for (i in 0 until containerEntries.childCount) {
-                val row    = containerEntries.getChildAt(i) as? LinearLayout ?: continue
-                val etDay  = row.getChildAt(0) as? EditText ?: continue
-                val etAmt  = row.getChildAt(1) as? EditText ?: continue
-                val dayStr = etDay.text.toString().trim()
-                val day: Int
-                if (dayStr.isEmpty()) {
-                    day = 0
-                } else {
-                    val parsed = dayStr.toIntOrNull()
-                    if (parsed == null || parsed < 1 || parsed > 31) {
-                        etDay.error = "1 a 31"; return null
-                    }
-                    etDay.error = null
-                    day = parsed
-                }
-                val amount = parseAmountPtBr(etAmt.text.toString())
-                if (amount == null || amount <= 0) {
-                    etAmt.error = "Valor inválido"; return null
-                }
-                etAmt.error = null
-                result.add(SalaryEntry(dayOfMonth = day, amount = amount))
+                val refs = containerEntries.getChildAt(i).tag as? RowRefs ?: continue
+
+                val title = refs.etTitle.text.toString().trim()
+                if (title.isEmpty()) { refs.etTitle.error = "Informe um título"; return null }
+                refs.etTitle.error = null
+
+                val category = refs.etCategory.text.toString().trim()
+                if (category.isEmpty()) { refs.etCategory.error = "Informe uma categoria"; return null }
+                refs.etCategory.error = null
+
+                val amount = parseAmountPtBr(refs.etAmount.text.toString())
+                if (amount == null || amount <= 0) { refs.etAmount.error = "Valor inválido"; return null }
+                refs.etAmount.error = null
+
+                val day = refs.etDay.text.toString().trim().toIntOrNull()
+                if (day == null || day !in 1..31) { refs.etDay.error = "1 a 31"; return null }
+                refs.etDay.error = null
+
+                result.add(
+                    RecurringItem(
+                        id = refs.id,
+                        title = title,
+                        type = refs.typeGetter(),
+                        amount = amount,
+                        category = category,
+                        dayOfMonth = day
+                    )
+                )
             }
             return result
         }
 
         val btnAddEntry = MaterialButton(ctx).apply {
-            text = "+ Adicionar entrada"
+            text = "+ Adicionar item"
             textSize = 13f
             setBackgroundColor(primaryBlue)
             setTextColor(0xFFFFFFFF.toInt())
@@ -455,21 +559,21 @@ class ProfileFragment : Fragment() {
         btnRow.addView(btnSave)
         root.addView(btnRow)
 
-        salaryRepo.loadConfig { config ->
-            val entries = config?.resolvedEntries() ?: emptyList()
+        recurringRepo.loadConfig { config ->
+            val items = config?.items ?: emptyList()
             containerEntries.removeAllViews()
-            entries.forEach { addRow(it.dayOfMonth, it.amount) }
+            items.forEach { addRow(it) }
         }
 
         btnAddEntry.setOnClickListener { addRow() }
         btnCancel.setOnClickListener { dialog.dismiss() }
         btnSave.setOnClickListener {
-            val entries = collectEntries() ?: return@setOnClickListener
-            val config  = SalaryConfig(entries = entries)
-            salaryRepo.saveConfig(config)
+            val items  = collectEntries() ?: return@setOnClickListener
+            val config = RecurringConfig(items = items)
+            recurringRepo.saveConfig(config)
                 .addOnSuccessListener {
-                    Toast.makeText(ctx, "Receita fixa salva!", Toast.LENGTH_SHORT).show()
-                    if (entries.isNotEmpty()) salaryRepo.checkAndPostSalaryIfNeeded(config) { tx ->
+                    Toast.makeText(ctx, "Recorrências salvas!", Toast.LENGTH_SHORT).show()
+                    if (items.isNotEmpty()) recurringRepo.checkAndPostIfNeeded(config) { tx ->
                         if (isAdded) Toast.makeText(
                             ctx,
                             "R$ ${"%.2f".format(tx.amount)} lançado para ${tx.date}",
@@ -483,7 +587,9 @@ class ProfileFragment : Fragment() {
                 }
         }
 
-        // Frame full-screen transparente — toque fora fecha o dialog
+        // Frame full-screen transparente — toque fora fecha o dialog. O conteúdo
+        // rola dentro de um ScrollView porque a lista de itens recorrentes pode
+        // crescer além da altura da tela (ao contrário da antiga entrada única de salário).
         val frame = FrameLayout(ctx).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -491,19 +597,23 @@ class ProfileFragment : Fragment() {
             )
             setOnClickListener { dialog.dismiss() }
         }
-        val wrapper = FrameLayout(ctx).apply {
+        val scrollWrapper = ScrollView(ctx).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT,
-                Gravity.CENTER
+                FrameLayout.LayoutParams.MATCH_PARENT
             )
             val h = dpToPx(24)
             val w = dpToPx(20)
             setPadding(w, h, w, h)
+            clipToPadding = false
             setOnClickListener { /* consome o toque para não fechar */ }
         }
-        wrapper.addView(root)
-        frame.addView(wrapper)
+        root.layoutParams = ScrollView.LayoutParams(
+            ScrollView.LayoutParams.MATCH_PARENT,
+            ScrollView.LayoutParams.WRAP_CONTENT
+        )
+        scrollWrapper.addView(root)
+        frame.addView(scrollWrapper)
 
         dialog.setContentView(frame)
         dialog.window?.apply {
