@@ -269,8 +269,10 @@ class ReportsFragment : Fragment() {
             val curYear  = cal.get(Calendar.YEAR)
             val curMonth = cal.get(Calendar.MONTH) + 1
             val categoryTotals = allTransactions.categoryTotalsForMonth("despesa", curYear, curMonth)
-            val overallTotal = categoryTotals.values.sum()
-            buildGoalsProgress(llGoalsProgress, goals, categoryTotals, overallTotal)
+            val overallExpense = categoryTotals.values.sum()
+            val overallIncome = allTransactions.categoryTotalsForMonth("receita", curYear, curMonth).values.sum()
+            val monthlyProfit = overallIncome - overallExpense
+            buildGoalsProgress(llGoalsProgress, goals, categoryTotals, overallExpense, monthlyProfit)
         }
 
         fun renderSummary() {
@@ -410,7 +412,8 @@ class ReportsFragment : Fragment() {
         container: LinearLayout,
         goals: List<Goal>,
         categoryTotals: Map<String, Double>,
-        overallTotal: Double
+        overallExpense: Double,
+        monthlyProfit: Double
     ) {
         val ctx = requireContext()
         val dp  = ctx.resources.displayMetrics.density
@@ -429,15 +432,32 @@ class ReportsFragment : Fragment() {
         val trackColor = if (isDark) Color.parseColor("#1E293B") else Color.parseColor("#E2E8F0")
 
         goals.forEachIndexed { idx, goal ->
-            val spent = if (goal.category.isBlank()) overallTotal else (categoryTotals[goal.category] ?: 0.0)
-            val pct = if (goal.targetAmount > 0) (spent / goal.targetAmount * 100.0) else 0.0
-            val label = goal.category.ifBlank { "Geral (todas as despesas)" }
+            val isLucro = goal.type == "lucro"
+            // Meta de gasto: progresso alto é ruim (estourou o limite).
+            // Meta de lucro: progresso alto é bom (bateu o lucro desejado) — cores invertidas.
+            val spent = if (goal.category.isBlank()) overallExpense else (categoryTotals[goal.category] ?: 0.0)
+            val current = if (isLucro) monthlyProfit else spent
+            val pct = if (goal.targetAmount > 0) (current / goal.targetAmount * 100.0) else 0.0
+            val label = if (isLucro) "Lucro mensal" else goal.category.ifBlank { "Geral (todas as despesas)" }
+            val caption = if (isLucro) {
+                "Meta de lucro: receita menos despesa do mês"
+            } else {
+                "Limite de gasto: " + if (goal.category.isBlank()) "soma de todas as despesas do mês" else "categoria \"${goal.category}\""
+            }
             val isLast = idx == goals.size - 1
 
-            val barColor = when {
-                pct >= 100.0 -> ContextCompat.getColor(ctx, R.color.expense)
-                pct >= 80.0  -> Color.parseColor("#D97706")
-                else         -> ContextCompat.getColor(ctx, R.color.income)
+            val barColor = if (isLucro) {
+                when {
+                    pct >= 100.0 -> ContextCompat.getColor(ctx, R.color.income)
+                    pct >= 50.0  -> Color.parseColor("#D97706")
+                    else         -> ContextCompat.getColor(ctx, R.color.expense)
+                }
+            } else {
+                when {
+                    pct >= 100.0 -> ContextCompat.getColor(ctx, R.color.expense)
+                    pct >= 80.0  -> Color.parseColor("#D97706")
+                    else         -> ContextCompat.getColor(ctx, R.color.income)
+                }
             }
 
             val row = LinearLayout(ctx).apply {
@@ -452,7 +472,7 @@ class ReportsFragment : Fragment() {
                 gravity = Gravity.CENTER_VERTICAL
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply { bottomMargin = (6 * dp).toInt() }
+                ).apply { bottomMargin = (2 * dp).toInt() }
             }
             topRow.addView(TextView(ctx).apply {
                 text = label
@@ -468,8 +488,21 @@ class ReportsFragment : Fragment() {
                 setTextColor(barColor)
             })
 
+            val tvCaption = TextView(ctx).apply {
+                text = caption
+                textSize = 10.5f
+                setTextColor(ContextCompat.getColor(ctx, R.color.text_hint))
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply { bottomMargin = (4 * dp).toInt() }
+            }
+
             val tvValues = TextView(ctx).apply {
-                text = "R$ ${"%.2f".format(spent)} de R$ ${"%.2f".format(goal.targetAmount)}"
+                text = if (isLucro) {
+                    "Lucro atual: R$ ${"%.2f".format(current)}  ·  meta: R$ ${"%.2f".format(goal.targetAmount)}"
+                } else {
+                    "R$ ${"%.2f".format(current)} de R$ ${"%.2f".format(goal.targetAmount)}"
+                }
                 textSize = 11f
                 setTextColor(ContextCompat.getColor(ctx, R.color.text_hint))
                 layoutParams = LinearLayout.LayoutParams(
@@ -504,6 +537,7 @@ class ReportsFragment : Fragment() {
             track.addView(rest)
 
             row.addView(topRow)
+            row.addView(tvCaption)
             row.addView(tvValues)
             row.addView(track)
             container.addView(row)

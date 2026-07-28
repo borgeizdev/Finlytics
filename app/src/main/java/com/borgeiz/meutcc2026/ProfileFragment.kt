@@ -959,31 +959,89 @@ class ProfileFragment : Fragment() {
         root.addView(tvTitle)
 
         val tvInfo = TextView(ctx).apply {
-            text = "Defina limites de gasto por mês, gerais ou por categoria. O progresso aparece em Relatórios."
             textSize = 13f
             setTextColor(0xFF64748B.toInt())
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).also { it.bottomMargin = dpToPx(20) }
+            ).also { it.bottomMargin = dpToPx(16) }
         }
         root.addView(tvInfo)
 
-        val containerEntries = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
+        // Abas: "Limite de gasto" (meta tradicional, geral ou por categoria) e
+        // "Lucro mensal" (receita menos despesa do mês >= valor alvo). Cada aba
+        // guarda sua própria lista de metas em memória até salvar.
+        var currentTab = "gasto"
+
+        val btnTabGasto = MaterialButton(ctx).apply {
+            text = "Limite de gasto"
+            textSize = 12f
+            isAllCaps = false
+            cornerRadius = dpToPx(10)
+            layoutParams = LinearLayout.LayoutParams(0, dpToPx(42), 1f).also { it.marginEnd = dpToPx(6) }
         }
-        root.addView(containerEntries)
+        val btnTabLucro = MaterialButton(ctx).apply {
+            text = "Lucro mensal"
+            textSize = 12f
+            isAllCaps = false
+            cornerRadius = dpToPx(10)
+            layoutParams = LinearLayout.LayoutParams(0, dpToPx(42), 1f)
+        }
+        val tabRow = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+            ).also { it.bottomMargin = dpToPx(16) }
+        }
+        tabRow.addView(btnTabGasto)
+        tabRow.addView(btnTabLucro)
+        root.addView(tabRow)
+
+        val containerGasto = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        val containerLucro = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            visibility = View.GONE
+        }
+        root.addView(containerGasto)
+        root.addView(containerLucro)
+
+        fun paintTabs() {
+            val activeColor  = ctx.getColor(R.color.primary)
+            val activeText   = ctx.getColor(R.color.on_primary)
+            val inactiveBg   = ctx.getColor(R.color.bg_card_subtle)
+            val inactiveText = ctx.getColor(R.color.text_secondary)
+            if (currentTab == "gasto") {
+                btnTabGasto.backgroundTintList = ColorStateList.valueOf(activeColor)
+                btnTabGasto.setTextColor(activeText)
+                btnTabLucro.backgroundTintList = ColorStateList.valueOf(inactiveBg)
+                btnTabLucro.setTextColor(inactiveText)
+                containerGasto.visibility = View.VISIBLE
+                containerLucro.visibility = View.GONE
+                tvInfo.text = "Defina um limite de gasto mensal, geral ou por categoria. O progresso mostra o quanto já foi gasto em relação a esse limite — passar de 100% significa que a meta estourou."
+            } else {
+                btnTabLucro.backgroundTintList = ColorStateList.valueOf(activeColor)
+                btnTabLucro.setTextColor(activeText)
+                btnTabGasto.backgroundTintList = ColorStateList.valueOf(inactiveBg)
+                btnTabGasto.setTextColor(inactiveText)
+                containerGasto.visibility = View.GONE
+                containerLucro.visibility = View.VISIBLE
+                tvInfo.text = "Defina quanto você quer que sobre no mês (receitas menos despesas). O progresso mostra o quanto desse lucro-alvo já foi alcançado — chegar a 100% significa que a meta foi batida."
+            }
+        }
+        paintTabs()
+        btnTabGasto.setOnClickListener { currentTab = "gasto"; paintTabs() }
+        btnTabLucro.setOnClickListener { currentTab = "lucro"; paintTabs() }
 
         data class GoalRowRefs(
             val id: String,
-            val spCategory: Spinner,
+            val spCategory: Spinner?,
             val etAmount: EditText,
             val categoryValues: List<String>
         )
 
         var expenseCategories = listOf<String>()
 
-        fun addRow(goal: Goal? = null) {
+        fun addGastoRow(goal: Goal? = null) {
             val rowId = goal?.id?.takeIf { it.isNotBlank() } ?: java.util.UUID.randomUUID().toString()
 
             val row = LinearLayout(ctx).apply {
@@ -1024,26 +1082,70 @@ class ProfileFragment : Fragment() {
                 setBackgroundColor(android.graphics.Color.TRANSPARENT)
                 layoutParams = LinearLayout.LayoutParams(dpToPx(40), dpToPx(40))
                 contentDescription = "Remover"
-                setOnClickListener { containerEntries.removeView(row) }
+                setOnClickListener { containerGasto.removeView(row) }
             }
 
             row.addView(spCategory)
             row.addView(etAmount)
             row.addView(btnRemove)
             row.tag = GoalRowRefs(rowId, spCategory, etAmount, categoryValues)
-            containerEntries.addView(row)
+            containerGasto.addView(row)
+        }
+
+        fun addLucroRow(goal: Goal? = null) {
+            val rowId = goal?.id?.takeIf { it.isNotBlank() } ?: java.util.UUID.randomUUID().toString()
+
+            val row = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+                ).also { it.bottomMargin = dpToPx(12) }
+            }
+
+            val etAmount = EditText(ctx).apply {
+                hint = "Lucro alvo no mês (R$)"
+                setText(if ((goal?.targetAmount ?: 0.0) > 0) "%.2f".format(goal!!.targetAmount) else "")
+                inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+                isSingleLine = true
+                setHintTextColor(ctx.getColor(R.color.text_hint))
+                setTextColor(ctx.getColor(R.color.text_heading))
+                background = androidx.core.content.ContextCompat.getDrawable(ctx, R.drawable.bg_outlined_input)
+                setPadding(dpToPx(12), dpToPx(14), dpToPx(12), dpToPx(14))
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                    .also { it.marginEnd = dpToPx(8) }
+            }
+
+            val btnRemove = ImageButton(ctx).apply {
+                setImageDrawable(androidx.core.content.ContextCompat.getDrawable(ctx, R.drawable.ic_remove))
+                setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                layoutParams = LinearLayout.LayoutParams(dpToPx(40), dpToPx(40))
+                contentDescription = "Remover"
+                setOnClickListener { containerLucro.removeView(row) }
+            }
+
+            row.addView(etAmount)
+            row.addView(btnRemove)
+            row.tag = GoalRowRefs(rowId, null, etAmount, emptyList())
+            containerLucro.addView(row)
+        }
+
+        fun collectFrom(container: LinearLayout, type: String, result: MutableList<Goal>): Boolean {
+            for (i in 0 until container.childCount) {
+                val refs = container.getChildAt(i).tag as? GoalRowRefs ?: continue
+                val amount = parseAmountPtBr(refs.etAmount.text.toString())
+                if (amount == null || amount <= 0.0) { refs.etAmount.error = "Valor inválido"; return false }
+                refs.etAmount.error = null
+                val category = refs.spCategory?.let { sp -> refs.categoryValues.getOrElse(sp.selectedItemPosition) { "" } } ?: ""
+                result.add(Goal(id = refs.id, category = category, targetAmount = amount, period = "mensal", type = type))
+            }
+            return true
         }
 
         fun collectGoals(): List<Goal>? {
             val result = mutableListOf<Goal>()
-            for (i in 0 until containerEntries.childCount) {
-                val refs = containerEntries.getChildAt(i).tag as? GoalRowRefs ?: continue
-                val amount = parseAmountPtBr(refs.etAmount.text.toString())
-                if (amount == null || amount <= 0.0) { refs.etAmount.error = "Valor inválido"; return null }
-                refs.etAmount.error = null
-                val category = refs.categoryValues.getOrElse(refs.spCategory.selectedItemPosition) { "" }
-                result.add(Goal(id = refs.id, category = category, targetAmount = amount, period = "mensal"))
-            }
+            if (!collectFrom(containerGasto, "gasto", result)) return null
+            if (!collectFrom(containerLucro, "lucro", result)) return null
             return result
         }
 
@@ -1091,12 +1193,15 @@ class ProfileFragment : Fragment() {
         categoryRepo.loadConfig { catConfig ->
             expenseCategories = catConfig.expense
             goalRepo.loadConfig { goalConfig ->
-                containerEntries.removeAllViews()
-                goalConfig.items.forEach { addRow(it) }
+                containerGasto.removeAllViews()
+                containerLucro.removeAllViews()
+                goalConfig.items.forEach { goal ->
+                    if (goal.type == "lucro") addLucroRow(goal) else addGastoRow(goal)
+                }
             }
         }
 
-        btnAddEntry.setOnClickListener { addRow() }
+        btnAddEntry.setOnClickListener { if (currentTab == "gasto") addGastoRow() else addLucroRow() }
         btnCancel.setOnClickListener { dialog.dismiss() }
         btnSave.setOnClickListener {
             val goals = collectGoals() ?: return@setOnClickListener
