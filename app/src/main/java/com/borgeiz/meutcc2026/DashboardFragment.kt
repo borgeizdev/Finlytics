@@ -204,7 +204,7 @@ class DashboardFragment : Fragment() {
             isUp == upIsGood -> R.color.income
             else             -> R.color.expense
         }
-        target.text = "$arrow ${"%.0f".format(kotlin.math.abs(pct))}% vs mês passado"
+        target.text = "$arrow ${"%.0f".format(kotlin.math.abs(pct))}% em relação ao mês passado"
         target.setTextColor(ContextCompat.getColor(ctx, colorRes))
     }
 }

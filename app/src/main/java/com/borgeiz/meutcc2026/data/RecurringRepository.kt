@@ -26,13 +26,20 @@ class RecurringRepository(uid: String) {
 
     private val userRef: DatabaseReference = FirebaseDatabase.getInstance().reference.child("users").child(uid)
     private val configRef: DatabaseReference = userRef.child("recurringConfig")
+    private val migratedRef: DatabaseReference = userRef.child("recurringConfigMigrated")
     private val legacySalaryConfigRef: DatabaseReference = userRef.child("salaryConfig")
     private val txRef: DatabaseReference = userRef.child("transactions")
 
     /**
      * Carrega a config atual. Se ainda não existir (usuário nunca configurou
-     * recorrências no novo formato), migra uma única vez a configuração
-     * antiga de salário fixo, se houver.
+     * recorrências no novo formato) E a migração ainda não tiver rodado, migra
+     * uma única vez a configuração antiga de salário fixo, se houver.
+     *
+     * O Firebase Realtime Database remove nodes cujo valor serializado fica
+     * vazio (ex: RecurringConfig com items = []), então salvar uma lista vazia
+     * apaga o node "recurringConfig" inteiro. Sem o marcador "recurringConfigMigrated"
+     * separado, o próximo loadConfig() interpretaria isso como "nunca configurado"
+     * e re-rodaria a migração, ressuscitando o salário antigo.
      */
     fun loadConfig(onResult: (RecurringConfig?) -> Unit) {
         configRef.addListenerForSingleValueEvent(object : ValueEventListener {
@@ -41,30 +48,40 @@ class RecurringRepository(uid: String) {
                     onResult(snapshot.getValue(RecurringConfig::class.java))
                     return
                 }
-                legacySalaryConfigRef.addListenerForSingleValueEvent(object : ValueEventListener {
-                    override fun onDataChange(legacySnapshot: DataSnapshot) {
-                        val legacy = legacySnapshot.getValue(SalaryConfig::class.java)
-                        val items = legacy?.resolvedEntries().orEmpty().map { entry ->
-                            RecurringItem(
-                                id = UUID.randomUUID().toString(),
-                                title = "Salário",
-                                type = "receita",
-                                amount = entry.amount,
-                                category = "Salário",
-                                dayOfMonth = entry.dayOfMonth
-                            )
+                migratedRef.addListenerForSingleValueEvent(object : ValueEventListener {
+                    override fun onDataChange(migratedSnapshot: DataSnapshot) {
+                        if (migratedSnapshot.getValue(Boolean::class.java) == true) {
+                            onResult(RecurringConfig(items = emptyList()))
+                            return
                         }
-                        val migrated = RecurringConfig(items = items)
-                        if (items.isEmpty()) {
-                            onResult(migrated)
-                        } else {
-                            // Persiste a migração para os ids gerados ficarem estáveis entre
-                            // execuções — sem isso, o dedup de checkAndPostIfNeeded (que usa
-                            // recurringId) quebraria e o salário seria relançado repetidamente.
-                            configRef.setValue(migrated).addOnCompleteListener {
-                                onResult(migrated)
+                        legacySalaryConfigRef.addListenerForSingleValueEvent(object : ValueEventListener {
+                            override fun onDataChange(legacySnapshot: DataSnapshot) {
+                                val legacy = legacySnapshot.getValue(SalaryConfig::class.java)
+                                val items = legacy?.resolvedEntries().orEmpty().map { entry ->
+                                    RecurringItem(
+                                        id = UUID.randomUUID().toString(),
+                                        title = "Salário",
+                                        type = "receita",
+                                        amount = entry.amount,
+                                        category = "Salário",
+                                        dayOfMonth = entry.dayOfMonth
+                                    )
+                                }
+                                val migrated = RecurringConfig(items = items)
+                                migratedRef.setValue(true)
+                                if (items.isEmpty()) {
+                                    onResult(migrated)
+                                } else {
+                                    // Persiste a migração para os ids gerados ficarem estáveis entre
+                                    // execuções — sem isso, o dedup de checkAndPostIfNeeded (que usa
+                                    // recurringId) quebraria e o salário seria relançado repetidamente.
+                                    configRef.setValue(migrated).addOnCompleteListener {
+                                        onResult(migrated)
+                                    }
+                                }
                             }
-                        }
+                            override fun onCancelled(error: DatabaseError) { onResult(null) }
+                        })
                     }
                     override fun onCancelled(error: DatabaseError) { onResult(null) }
                 })
@@ -73,7 +90,14 @@ class RecurringRepository(uid: String) {
         })
     }
 
-    fun saveConfig(config: RecurringConfig): Task<Void> = configRef.setValue(config)
+    fun saveConfig(config: RecurringConfig): Task<Void> {
+        // Marca a migração como concluída em qualquer save explícito do usuário
+        // (mesmo salvando uma lista vazia) para nunca mais re-rodar a migração
+        // legada, já que o node "recurringConfig" pode desaparecer do Firebase
+        // quando fica vazio (ver comentário em loadConfig).
+        migratedRef.setValue(true)
+        return configRef.setValue(config)
+    }
 
     /**
      * Lança as transações pendentes do mês atual, uma por item recorrente

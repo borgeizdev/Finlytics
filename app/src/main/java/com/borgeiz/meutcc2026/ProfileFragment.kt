@@ -617,9 +617,9 @@ class ProfileFragment : Fragment() {
             clipToPadding = false
             setOnClickListener { /* consome o toque para não fechar */ }
         }
-        root.layoutParams = ScrollView.LayoutParams(
-            ScrollView.LayoutParams.MATCH_PARENT,
-            ScrollView.LayoutParams.WRAP_CONTENT
+        root.layoutParams = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
         )
         scrollWrapper.addView(root)
         frame.addView(scrollWrapper)
@@ -858,9 +858,9 @@ class ProfileFragment : Fragment() {
             clipToPadding = false
             setOnClickListener { /* consome o toque para não fechar */ }
         }
-        root.layoutParams = ScrollView.LayoutParams(
-            ScrollView.LayoutParams.MATCH_PARENT,
-            ScrollView.LayoutParams.WRAP_CONTENT
+        root.layoutParams = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
         )
         scrollWrapper.addView(root)
         frame.addView(scrollWrapper)
@@ -1081,9 +1081,9 @@ class ProfileFragment : Fragment() {
             clipToPadding = false
             setOnClickListener { /* consome o toque para não fechar */ }
         }
-        root.layoutParams = ScrollView.LayoutParams(
-            ScrollView.LayoutParams.MATCH_PARENT,
-            ScrollView.LayoutParams.WRAP_CONTENT
+        root.layoutParams = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
         )
         scrollWrapper.addView(root)
         frame.addView(scrollWrapper)
