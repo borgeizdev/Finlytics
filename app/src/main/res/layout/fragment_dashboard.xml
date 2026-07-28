@@ -296,5 +296,17 @@
             app:cornerRadius="12dp"
             app:backgroundTint="@color/primary" />
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnPaymentMethodAnalysisHome"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:text="Análise por forma de pagamento/intervalo"
+            android:textSize="13sp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            app:cornerRadius="12dp"
+            app:icon="@drawable/ic_calendar"
+            app:iconGravity="textStart"
+            app:strokeColor="@color/border" />
+
     </LinearLayout>
 </ScrollView>

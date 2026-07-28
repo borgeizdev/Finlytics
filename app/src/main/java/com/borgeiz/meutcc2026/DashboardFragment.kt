@@ -71,6 +71,13 @@ class DashboardFragment : Fragment() {
             (activity as? MainActivity)?.openAddTransaction()
         }
 
+        view.findViewById<MaterialButton>(R.id.btnPaymentMethodAnalysisHome).setOnClickListener {
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.frameContainer, PaymentMethodReportFragment())
+                .addToBackStack(null)
+                .commit()
+        }
+
         etSearch.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
