@@ -41,6 +41,13 @@ import java.util.Calendar
 
 class ReportsFragment : Fragment() {
 
+    companion object {
+        // Em memória (não persiste no disco): mantém a seleção do usuário ao navegar
+        // entre abas durante a sessão, mas volta pro padrão "Todos os meses" quando
+        // o processo do app morre e é reaberto.
+        private var lastCatMonthSelection = 0
+    }
+
     private val monthLabels = listOf(
         "Todos", "Jan", "Fev", "Mar", "Abr",
         "Mai", "Jun", "Jul", "Ago",
@@ -118,8 +125,7 @@ class ReportsFragment : Fragment() {
             android.R.layout.simple_spinner_dropdown_item,
             monthLabelsFull
         )
-        val currentMonth = Calendar.getInstance().get(Calendar.MONTH) + 1
-        spCatMonth.setSelection(currentMonth)
+        spCatMonth.setSelection(lastCatMonthSelection)
 
         pieChart.setNoDataText("")
         barChart.setNoDataText("")
@@ -283,6 +289,7 @@ class ReportsFragment : Fragment() {
 
         spCatMonth.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(p: AdapterView<*>?, v: View?, pos: Int, id: Long) {
+                lastCatMonthSelection = pos
                 refreshCategoryChart(pos)
             }
             override fun onNothingSelected(p: AdapterView<*>?) {}
