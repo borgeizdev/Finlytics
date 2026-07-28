@@ -299,12 +299,18 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnPaymentMethodAnalysisHome"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="52dp"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
             android:text="Análise por forma de pagamento/intervalo"
             android:textSize="13sp"
+            android:maxLines="1"
+            android:ellipsize="end"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             app:cornerRadius="12dp"
             app:icon="@drawable/ic_calendar"
+            app:iconSize="18dp"
+            app:iconPadding="10dp"
             app:iconGravity="textStart"
             app:strokeColor="@color/border" />
 
