@@ -296,23 +296,67 @@
             app:cornerRadius="12dp"
             app:backgroundTint="@color/primary" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnPaymentMethodAnalysisHome"
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardPaymentMethodAnalysisHome"
             android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:text="Análise por forma de pagamento/intervalo"
-            android:textSize="13sp"
-            android:maxLines="1"
-            android:ellipsize="end"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            app:cornerRadius="12dp"
-            app:icon="@drawable/ic_calendar"
-            app:iconSize="18dp"
-            app:iconPadding="10dp"
-            app:iconGravity="textStart"
-            app:strokeColor="@color/border" />
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="@color/bg_card">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="14dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground">
+
+                <ImageView
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:layout_marginEnd="14dp"
+                    android:padding="11dp"
+                    android:background="@drawable/bg_circle_primary_light"
+                    android:src="@drawable/ic_calendar"
+                    app:tint="@color/primary" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Análise por forma de pagamento"
+                        android:textColor="@color/text_heading"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Filtre por período e forma de pagamento"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp" />
+
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="›"
+                    android:textColor="@color/text_hint"
+                    android:textSize="22sp" />
+
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
 
     </LinearLayout>
 </ScrollView>

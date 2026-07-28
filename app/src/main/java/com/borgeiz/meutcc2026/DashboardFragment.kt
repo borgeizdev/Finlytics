@@ -71,7 +71,7 @@ class DashboardFragment : Fragment() {
             (activity as? MainActivity)?.openAddTransaction()
         }
 
-        view.findViewById<MaterialButton>(R.id.btnPaymentMethodAnalysisHome).setOnClickListener {
+        view.findViewById<androidx.cardview.widget.CardView>(R.id.cardPaymentMethodAnalysisHome).setOnClickListener {
             parentFragmentManager.beginTransaction()
                 .replace(R.id.frameContainer, PaymentMethodReportFragment())
                 .addToBackStack(null)
