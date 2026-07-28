@@ -300,7 +300,171 @@ class ProfileFragment : Fragment() {
 
     private fun showRecurringItemsDialog(uid: String) {
         val ctx = requireContext()
+
+        val dialog = android.app.Dialog(ctx)
+        dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
+        dialog.setCanceledOnTouchOutside(true)
+
+        val root = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dpToPx(20), dpToPx(20), dpToPx(20), dpToPx(12))
+            background = android.graphics.drawable.GradientDrawable().apply {
+                setColor(ctx.getColor(R.color.bg_card))
+                cornerRadius = dpToPx(20).toFloat()
+            }
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            ).also { it.gravity = Gravity.CENTER }
+            setOnClickListener { /* consome o toque para não fechar */ }
+        }
+
+        // Card pequeno e de altura fixa (duas opções) — sem lista rolável aqui,
+        // então basta centralizar na tela, sem o problema de esticar visto no
+        // dialog de edição (showRecurringTypeDialog), que usa ScrollView.
+        val frame = FrameLayout(ctx).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+            val h = dpToPx(24)
+            val w = dpToPx(20)
+            setPadding(w, h, w, h)
+            clipToPadding = false
+            setOnClickListener { dialog.dismiss() }
+        }
+        frame.addView(root)
+
+        val tvTitle = TextView(ctx).apply {
+            text = "Recorrências"
+            textSize = 18f
+            setTextColor(ctx.getColor(R.color.text_heading))
+            setTypeface(null, android.graphics.Typeface.BOLD)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).also { it.bottomMargin = dpToPx(4) }
+        }
+        root.addView(tvTitle)
+
+        val tvInfo = TextView(ctx).apply {
+            text = "O que você quer configurar?"
+            textSize = 13f
+            setTextColor(0xFF64748B.toInt())
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).also { it.bottomMargin = dpToPx(16) }
+        }
+        root.addView(tvInfo)
+
+        data class TypeOption(
+            val type: String, val iconRes: Int, val iconTintRes: Int, val iconBgRes: Int,
+            val title: String, val subtitle: String
+        )
+        val options = listOf(
+            TypeOption(
+                "receita", R.drawable.ic_trending_up, R.color.income, R.color.settings_badge_salary,
+                "Receitas", "Salário, bônus e outras entradas fixas"
+            ),
+            TypeOption(
+                "despesa", R.drawable.ic_trending_down, R.color.expense, R.color.settings_badge_category,
+                "Despesas", "Assinaturas, aluguel e contas fixas"
+            )
+        )
+
+        options.forEachIndexed { index, option ->
+            val row = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dpToPx(12), dpToPx(14), dpToPx(12), dpToPx(14))
+                isClickable = true
+                isFocusable = true
+                background = ctx.obtainStyledAttributes(
+                    intArrayOf(android.R.attr.selectableItemBackground)
+                ).let { ta -> ta.getDrawable(0).also { ta.recycle() } }
+                setOnClickListener {
+                    dialog.dismiss()
+                    showRecurringTypeDialog(uid, option.type)
+                }
+            }
+
+            val iconBadge = ImageView(ctx).apply {
+                setImageResource(option.iconRes)
+                imageTintList = ColorStateList.valueOf(ctx.getColor(option.iconTintRes))
+                scaleType = ImageView.ScaleType.CENTER_INSIDE
+                setPadding(dpToPx(10), dpToPx(10), dpToPx(10), dpToPx(10))
+                layoutParams = LinearLayout.LayoutParams(dpToPx(44), dpToPx(44)).also {
+                    it.marginEnd = dpToPx(14)
+                }
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.OVAL
+                    setColor(ctx.getColor(option.iconBgRes))
+                }
+            }
+
+            val textBlock = LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            }
+            textBlock.addView(TextView(ctx).apply {
+                text = option.title
+                textSize = 15f
+                setTextColor(ctx.getColor(R.color.text_heading))
+                setTypeface(null, android.graphics.Typeface.BOLD)
+            })
+            textBlock.addView(TextView(ctx).apply {
+                text = option.subtitle
+                textSize = 12f
+                setTextColor(ctx.getColor(R.color.text_secondary))
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).also { it.topMargin = dpToPx(2) }
+            })
+
+            val chevron = TextView(ctx).apply {
+                text = "›"
+                textSize = 22f
+                setTextColor(ctx.getColor(R.color.text_hint))
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).also { it.marginStart = dpToPx(8) }
+            }
+
+            row.addView(iconBadge)
+            row.addView(textBlock)
+            row.addView(chevron)
+            root.addView(row)
+
+            if (index < options.lastIndex) {
+                root.addView(View(ctx).apply {
+                    layoutParams = LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT, dpToPx(1)
+                    ).also { it.marginStart = dpToPx(70) }
+                    setBackgroundColor(ctx.getColor(R.color.divider))
+                })
+            }
+        }
+
+        dialog.setContentView(frame)
+        dialog.window?.apply {
+            setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+            setLayout(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT
+            )
+            addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            setDimAmount(0.5f)
+        }
+        dialog.show()
+    }
+
+    private fun showRecurringTypeDialog(uid: String, type: String) {
+        val ctx = requireContext()
         val recurringRepo = RecurringRepository(uid)
+        val typeLabel = if (type == "receita") "Receitas" else "Despesas"
 
         val dialog = android.app.Dialog(ctx)
         dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE)
@@ -337,16 +501,27 @@ class ProfileFragment : Fragment() {
             isFillViewport = true
             setOnClickListener { /* consome o toque para não fechar */ }
         }
+        // isFillViewport estica o filho direto do ScrollView para ocupar a tela
+        // toda quando o conteúdo é menor que ela. Sem esse wrapper transparente
+        // no meio, era o próprio "root" (o card com fundo arredondado) que virava
+        // o filho direto e ficava esticado do topo até embaixo mesmo com 1-2 itens.
+        val scrollContent = FrameLayout(ctx).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
         val rootLayoutParams = FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,
             FrameLayout.LayoutParams.WRAP_CONTENT
         ).also { it.gravity = Gravity.TOP }
         root.layoutParams = rootLayoutParams
-        scrollWrapper.addView(root)
+        scrollContent.addView(root)
+        scrollWrapper.addView(scrollContent)
         frame.addView(scrollWrapper)
 
         val tvTitle = TextView(ctx).apply {
-            text = "Recorrências"
+            text = typeLabel
             textSize = 18f
             setTextColor(ctx.getColor(R.color.text_heading))
             setTypeface(null, android.graphics.Typeface.BOLD)
@@ -358,7 +533,10 @@ class ProfileFragment : Fragment() {
         root.addView(tvTitle)
 
         val tvInfo = TextView(ctx).apply {
-            text = "Receitas e despesas que se repetem todo mês (salário, assinaturas, aluguel etc.)."
+            text = if (type == "receita")
+                "Receitas que se repetem todo mês (salário, bônus, extras)."
+            else
+                "Despesas que se repetem todo mês (assinaturas, aluguel, contas fixas)."
             textSize = 13f
             setTextColor(0xFF64748B.toInt())
             layoutParams = LinearLayout.LayoutParams(
@@ -368,64 +546,8 @@ class ProfileFragment : Fragment() {
         }
         root.addView(tvInfo)
 
-        // Abas Receita / Despesa: cada aba guarda seus próprios itens em memória,
-        // então trocar de aba antes de salvar não perde o que foi digitado na outra.
-        var currentTab = "receita"
-
-        val btnTabReceita = MaterialButton(ctx).apply {
-            text = "Receita"
-            textSize = 13f
-            cornerRadius = dpToPx(10)
-            layoutParams = LinearLayout.LayoutParams(0, dpToPx(42), 1f).also { it.marginEnd = dpToPx(6) }
-        }
-        val btnTabDespesa = MaterialButton(ctx).apply {
-            text = "Despesa"
-            textSize = 13f
-            cornerRadius = dpToPx(10)
-            layoutParams = LinearLayout.LayoutParams(0, dpToPx(42), 1f)
-        }
-        val tabRow = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
-            ).also { it.bottomMargin = dpToPx(16) }
-        }
-        tabRow.addView(btnTabReceita)
-        tabRow.addView(btnTabDespesa)
-        root.addView(tabRow)
-
-        val containerIncome = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        val containerExpense = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            visibility = View.GONE
-        }
-        root.addView(containerIncome)
-        root.addView(containerExpense)
-
-        fun paintTabs() {
-            val activeColor  = ctx.getColor(R.color.primary)
-            val activeText   = ctx.getColor(R.color.on_primary)
-            val inactiveBg   = ctx.getColor(R.color.bg_card_subtle)
-            val inactiveText = ctx.getColor(R.color.text_secondary)
-            if (currentTab == "receita") {
-                btnTabReceita.backgroundTintList = ColorStateList.valueOf(activeColor)
-                btnTabReceita.setTextColor(activeText)
-                btnTabDespesa.backgroundTintList = ColorStateList.valueOf(inactiveBg)
-                btnTabDespesa.setTextColor(inactiveText)
-                containerIncome.visibility = View.VISIBLE
-                containerExpense.visibility = View.GONE
-            } else {
-                btnTabDespesa.backgroundTintList = ColorStateList.valueOf(activeColor)
-                btnTabDespesa.setTextColor(activeText)
-                btnTabReceita.backgroundTintList = ColorStateList.valueOf(inactiveBg)
-                btnTabReceita.setTextColor(inactiveText)
-                containerIncome.visibility = View.GONE
-                containerExpense.visibility = View.VISIBLE
-            }
-        }
-        paintTabs()
-        btnTabReceita.setOnClickListener { currentTab = "receita"; paintTabs() }
-        btnTabDespesa.setOnClickListener { currentTab = "despesa"; paintTabs() }
+        val container = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        root.addView(container)
 
         data class RowRefs(
             val id: String,
@@ -435,8 +557,7 @@ class ProfileFragment : Fragment() {
             val etDay: EditText
         )
 
-        fun addRow(type: String, item: RecurringItem? = null) {
-            val container = if (type == "receita") containerIncome else containerExpense
+        fun addRow(item: RecurringItem? = null) {
             val rowId = item?.id?.takeIf { it.isNotBlank() } ?: java.util.UUID.randomUUID().toString()
 
             val row = LinearLayout(ctx).apply {
@@ -531,24 +652,25 @@ class ProfileFragment : Fragment() {
             container.addView(row)
         }
 
-        fun collectFrom(container: LinearLayout, type: String, result: MutableList<RecurringItem>): Boolean {
+        fun collectEntries(): List<RecurringItem>? {
+            val result = mutableListOf<RecurringItem>()
             for (i in 0 until container.childCount) {
                 val refs = container.getChildAt(i).tag as? RowRefs ?: continue
 
                 val title = refs.etTitle.text.toString().trim()
-                if (title.isEmpty()) { refs.etTitle.error = "Informe um título"; return false }
+                if (title.isEmpty()) { refs.etTitle.error = "Informe um título"; return null }
                 refs.etTitle.error = null
 
                 val category = refs.etCategory.text.toString().trim()
-                if (category.isEmpty()) { refs.etCategory.error = "Informe uma categoria"; return false }
+                if (category.isEmpty()) { refs.etCategory.error = "Informe uma categoria"; return null }
                 refs.etCategory.error = null
 
                 val amount = parseAmountPtBr(refs.etAmount.text.toString())
-                if (amount == null || amount <= 0) { refs.etAmount.error = "Valor inválido"; return false }
+                if (amount == null || amount <= 0) { refs.etAmount.error = "Valor inválido"; return null }
                 refs.etAmount.error = null
 
                 val day = refs.etDay.text.toString().trim().toIntOrNull()
-                if (day == null || day !in 1..31) { refs.etDay.error = "1 a 31"; return false }
+                if (day == null || day !in 1..31) { refs.etDay.error = "1 a 31"; return null }
                 refs.etDay.error = null
 
                 result.add(
@@ -562,18 +684,11 @@ class ProfileFragment : Fragment() {
                     )
                 )
             }
-            return true
-        }
-
-        fun collectEntries(): List<RecurringItem>? {
-            val result = mutableListOf<RecurringItem>()
-            if (!collectFrom(containerIncome, "receita", result)) return null
-            if (!collectFrom(containerExpense, "despesa", result)) return null
             return result
         }
 
         val btnAddEntry = MaterialButton(ctx).apply {
-            text = "+ Adicionar item"
+            text = if (type == "receita") "+ Adicionar receita" else "+ Adicionar despesa"
             textSize = 13f
             setBackgroundColor(primaryBlue)
             setTextColor(0xFFFFFFFF.toInt())
@@ -613,25 +728,29 @@ class ProfileFragment : Fragment() {
         btnRow.addView(btnSave)
         root.addView(btnRow)
 
+        // Guarda os itens do outro tipo (não editados nesta tela) para não perdê-los ao salvar.
+        var otherTypeItems = listOf<RecurringItem>()
+
         recurringRepo.loadConfig { config ->
             val items = config?.items ?: emptyList()
-            containerIncome.removeAllViews()
-            containerExpense.removeAllViews()
-            items.forEach { addRow(it.type.takeIf { t -> t == "receita" || t == "despesa" } ?: "receita", it) }
+            otherTypeItems = items.filter { it.type != type }
+            val typeItems = items.filter { it.type == type }
+            container.removeAllViews()
+            typeItems.forEach { addRow(it) }
             // Sem nada salvo, centraliza o card na tela; com itens, mantém no topo (rolável).
-            rootLayoutParams.gravity = if (items.isEmpty()) Gravity.CENTER else Gravity.TOP
+            rootLayoutParams.gravity = if (typeItems.isEmpty()) Gravity.CENTER else Gravity.TOP
             root.layoutParams = rootLayoutParams
         }
 
-        btnAddEntry.setOnClickListener { addRow(currentTab) }
+        btnAddEntry.setOnClickListener { addRow() }
         btnCancel.setOnClickListener { dialog.dismiss() }
         btnSave.setOnClickListener {
             val items  = collectEntries() ?: return@setOnClickListener
-            val config = RecurringConfig(items = items)
+            val config = RecurringConfig(items = otherTypeItems + items)
             recurringRepo.saveConfig(config)
                 .addOnSuccessListener {
                     Toast.makeText(ctx, "Recorrências salvas!", Toast.LENGTH_SHORT).show()
-                    if (items.isNotEmpty()) recurringRepo.checkAndPostIfNeeded(config) { tx ->
+                    if (config.items.isNotEmpty()) recurringRepo.checkAndPostIfNeeded(config) { tx ->
                         if (isAdded) Toast.makeText(
                             ctx,
                             "R$ ${"%.2f".format(tx.amount)} lançado para ${tx.date}",
