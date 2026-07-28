@@ -93,68 +93,6 @@
 
     </LinearLayout>
 
-    <!-- Filtro: intervalo de datas customizado (tem prioridade sobre o mês quando preenchido) -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:paddingBottom="12dp">
-
-        <EditText
-            android:id="@+id/etFilterStartDate"
-            android:layout_width="0dp"
-            android:layout_height="44dp"
-            android:layout_weight="1"
-            android:layout_marginEnd="8dp"
-            android:background="@drawable/bg_spinner"
-            android:hint="De"
-            android:focusable="false"
-            android:clickable="true"
-            android:cursorVisible="false"
-            android:gravity="center_vertical"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:textSize="13sp"
-            android:textColor="@color/text_body"
-            android:textColorHint="@color/text_hint"
-            android:inputType="none" />
-
-        <EditText
-            android:id="@+id/etFilterEndDate"
-            android:layout_width="0dp"
-            android:layout_height="44dp"
-            android:layout_weight="1"
-            android:background="@drawable/bg_spinner"
-            android:hint="Até"
-            android:focusable="false"
-            android:clickable="true"
-            android:cursorVisible="false"
-            android:gravity="center_vertical"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp"
-            android:textSize="13sp"
-            android:textColor="@color/text_body"
-            android:textColorHint="@color/text_hint"
-            android:inputType="none" />
-
-        <TextView
-            android:id="@+id/btnClearDateFilter"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
-            android:layout_marginStart="8dp"
-            android:background="@drawable/bg_spinner"
-            android:gravity="center"
-            android:text="✕"
-            android:textColor="@color/text_hint"
-            android:textSize="16sp"
-            android:clickable="true"
-            android:focusable="true" />
-
-    </LinearLayout>
-
     <!-- Mensagem vazia -->
     <TextView
         android:id="@+id/tvEmptyTransactions"
