@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+
+    <path
+        android:name="swoosh_path"
+        android:pathData="M18,90 C36,90 42,58 64,52 C82,47 92,42 104,30"
+        android:strokeColor="@color/primary_text_subtle"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:strokeAlpha="0.9"
+        android:trimPathStart="0"
+        android:trimPathEnd="0" />
+
+    <group
+        android:name="bar1_group"
+        android:pivotX="36"
+        android:pivotY="94"
+        android:scaleY="0">
+        <path
+            android:name="bar1_path"
+            android:fillColor="@color/primary"
+            android:pathData="M28,94 L28,78 A4,4 0 0 1 32,74 L40,74 A4,4 0 0 1 44,78 L44,94 Z" />
+    </group>
+
+    <group
+        android:name="bar2_group"
+        android:pivotX="60"
+        android:pivotY="94"
+        android:scaleY="0">
+        <path
+            android:name="bar2_path"
+            android:fillColor="@color/primary"
+            android:pathData="M52,94 L52,62 A4,4 0 0 1 56,58 L64,58 A4,4 0 0 1 68,62 L68,94 Z" />
+    </group>
+
+    <group
+        android:name="bar3_group"
+        android:pivotX="84"
+        android:pivotY="94"
+        android:scaleY="0">
+        <path
+            android:name="bar3_path"
+            android:fillColor="@color/primary"
+            android:pathData="M76,94 L76,42 A4,4 0 0 1 80,38 L88,38 A4,4 0 0 1 92,42 L92,94 Z" />
+    </group>
+
+</vector>

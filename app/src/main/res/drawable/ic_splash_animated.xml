@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/ic_splash_logo_vector">
+
+    <target
+        android:name="bar1_group"
+        android:animation="@animator/splash_bar1_anim" />
+
+    <target
+        android:name="bar2_group"
+        android:animation="@animator/splash_bar2_anim" />
+
+    <target
+        android:name="bar3_group"
+        android:animation="@animator/splash_bar3_anim" />
+
+    <target
+        android:name="swoosh_path"
+        android:animation="@animator/splash_swoosh_anim" />
+
+</animated-vector>

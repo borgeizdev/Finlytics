@@ -21,12 +21,14 @@
     <style name="Theme.Meutcc2026" parent="Base.Theme.Meutcc2026" />
 
     <!--
-        Ícone vazio + fundo #1A1A2E = system splash totalmente invisível.
-        postSplashScreenTheme mantém #1A1A2E até setContentView() da SplashActivity.
+        Ícone transparente (não vetor vazio, que alguns fabricantes recusam e
+        substituem pelo ícone do launcher) + fundo #1A1A2E = a splash nativa
+        do sistema (obrigatória em Android 12+) vira só uma tela azul lisa,
+        no mesmo tom da SplashActivity, para blender de forma invisível.
     -->
     <style name="Theme.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">#1A1A2E</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_icon</item>
+        <item name="windowSplashScreenAnimatedIcon">@android:color/transparent</item>
         <item name="windowSplashScreenIconBackgroundColor">#1A1A2E</item>
         <item name="postSplashScreenTheme">@style/Theme.SplashContent</item>
     </style>
