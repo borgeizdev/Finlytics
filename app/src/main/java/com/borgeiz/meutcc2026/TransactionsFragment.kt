@@ -42,7 +42,7 @@ class TransactionsFragment : Fragment() {
         "Setembro", "Outubro", "Novembro", "Dezembro"
     )
 
-    private val paymentFilterOptions = listOf("Todas") + PaymentMethods.ALL + listOf(PaymentMethods.NAO_INFORMADO)
+    private val paymentFilterOptions = listOf("Todas as formas de pagamento") + PaymentMethods.ALL + listOf(PaymentMethods.NAO_INFORMADO)
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -62,7 +62,7 @@ class TransactionsFragment : Fragment() {
 
         recycler.layoutManager = LinearLayoutManager(requireContext())
 
-        val typeOptions = listOf("Todos", "Receitas", "Despesas")
+        val typeOptions = listOf("Todos os tipos", "Receitas", "Despesas")
         spFilterType.adapter = ArrayAdapter(
             requireContext(),
             android.R.layout.simple_spinner_dropdown_item,
@@ -147,7 +147,7 @@ class TransactionsFragment : Fragment() {
 
     private fun refreshCategoryOptions() {
         val current = spFilterCategory.selectedItem?.toString()
-        val categories = listOf("Todas") + allTransactions.map { it.category.ifBlank { "Outros" } }.distinct().sorted()
+        val categories = listOf("Todas as categorias") + allTransactions.map { it.category.ifBlank { "Outros" } }.distinct().sorted()
         spFilterCategory.adapter = ArrayAdapter(
             requireContext(),
             android.R.layout.simple_spinner_dropdown_item,

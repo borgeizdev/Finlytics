@@ -26,7 +26,7 @@ import java.util.Calendar
 
 class PaymentMethodReportFragment : Fragment() {
 
-    private val typeFilterLabels = listOf("Todos", "Receitas", "Despesas")
+    private val typeFilterLabels = listOf("Todos os tipos", "Receitas", "Despesas")
 
     private var txRepoRef: TransactionsRepository? = null
     private var txListenerRef: ValueEventListener? = null
