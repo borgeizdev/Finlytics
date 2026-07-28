@@ -1,13 +1,18 @@
 package com.borgeiz.meutcc2026
 
+import android.app.AlertDialog
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.ImageButton
+import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -22,14 +27,19 @@ import java.util.Calendar
 class TransactionsFragment : Fragment() {
 
     private lateinit var recycler: RecyclerView
-    private lateinit var spFilterType: Spinner
     private lateinit var spFilterMonth: Spinner
-    private lateinit var spFilterCategory: Spinner
-    private lateinit var spFilterPayment: Spinner
+    private lateinit var btnFilter: ImageButton
     private val allTransactions = mutableListOf<Transaction>()
+
+    private val typeFilterOptions = listOf("Todos os tipos", "Receitas", "Despesas")
+    private var filterType = typeFilterOptions[0]
+    private var filterCategory = "Todas as categorias"
+    private var filterPayment = "Todas as formas de pagamento"
 
     private var txRepo: TransactionsRepository? = null
     private var txListener: ValueEventListener? = null
+
+    private val primaryBlue get() = 0xFF2563EB.toInt()
 
     private val monthLabels = listOf(
         "Todos os meses",
@@ -47,20 +57,11 @@ class TransactionsFragment : Fragment() {
     ): View {
         val view = inflater.inflate(R.layout.fragment_transactions, container, false)
 
-        recycler          = view.findViewById(R.id.recyclerTransactions)
-        spFilterType      = view.findViewById(R.id.spFilterType)
-        spFilterMonth     = view.findViewById(R.id.spFilterMonth)
-        spFilterCategory  = view.findViewById(R.id.spFilterCategory)
-        spFilterPayment   = view.findViewById(R.id.spFilterPayment)
+        recycler      = view.findViewById(R.id.recyclerTransactions)
+        spFilterMonth = view.findViewById(R.id.spFilterMonth)
+        btnFilter     = view.findViewById(R.id.btnFilter)
 
         recycler.layoutManager = LinearLayoutManager(requireContext())
-
-        val typeOptions = listOf("Todos os tipos", "Receitas", "Despesas")
-        spFilterType.adapter = ArrayAdapter(
-            requireContext(),
-            android.R.layout.simple_spinner_dropdown_item,
-            typeOptions
-        )
 
         // Pré-seleciona o mês atual
         val currentMonth = Calendar.getInstance().get(Calendar.MONTH) + 1
@@ -70,21 +71,12 @@ class TransactionsFragment : Fragment() {
             monthLabels
         )
         spFilterMonth.setSelection(currentMonth)
-
-        spFilterPayment.adapter = ArrayAdapter(
-            requireContext(),
-            android.R.layout.simple_spinner_dropdown_item,
-            paymentFilterOptions
-        )
-
-        val filterListener = object : AdapterView.OnItemSelectedListener {
+        spFilterMonth.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, v: View?, pos: Int, id: Long) = applyFilter()
             override fun onNothingSelected(parent: AdapterView<*>?) {}
         }
-        spFilterType.onItemSelectedListener     = filterListener
-        spFilterMonth.onItemSelectedListener    = filterListener
-        spFilterCategory.onItemSelectedListener = filterListener
-        spFilterPayment.onItemSelectedListener  = filterListener
+
+        btnFilter.setOnClickListener { showFilterDialog() }
 
         loadTransactions()
         return view
@@ -111,32 +103,23 @@ class TransactionsFragment : Fragment() {
         }
     }
 
+    private fun categoryOptions() =
+        listOf("Todas as categorias") + allTransactions.map { it.category.ifBlank { "Outros" } }.distinct().sorted()
+
     private fun refreshCategoryOptions() {
-        val current = spFilterCategory.selectedItem?.toString()
-        val categories = listOf("Todas as categorias") + allTransactions.map { it.category.ifBlank { "Outros" } }.distinct().sorted()
-        spFilterCategory.adapter = ArrayAdapter(
-            requireContext(),
-            android.R.layout.simple_spinner_dropdown_item,
-            categories
-        )
-        val idx = current?.let { categories.indexOf(it) } ?: -1
-        spFilterCategory.setSelection(if (idx >= 0) idx else 0)
+        // Se a categoria selecionada não existe mais nos lançamentos atuais, volta pro padrão.
+        if (filterCategory !in categoryOptions()) filterCategory = "Todas as categorias"
     }
 
     private fun applyFilter() {
-        if (!::spFilterType.isInitialized || !::spFilterMonth.isInitialized) return
+        if (!::spFilterMonth.isInitialized) return
 
-        val typePos  = spFilterType.selectedItemPosition   // 0=Todos, 1=Receitas, 2=Despesas
         val monthPos = spFilterMonth.selectedItemPosition  // 0=Todos, 1-12=mês
-        val categoryPos = spFilterCategory.selectedItemPosition
-        val paymentPos  = spFilterPayment.selectedItemPosition
-        val selectedCategory = spFilterCategory.selectedItem?.toString()
-        val selectedPayment  = spFilterPayment.selectedItem?.toString()
 
         val filtered = allTransactions.filter { t ->
-            val typeOk = when (typePos) {
-                1 -> t.type == "receita"
-                2 -> t.type == "despesa"
+            val typeOk = when (filterType) {
+                "Receitas" -> t.type == "receita"
+                "Despesas" -> t.type == "despesa"
                 else -> true
             }
             val dateOk = if (monthPos == 0) {
@@ -146,10 +129,10 @@ class TransactionsFragment : Fragment() {
                 val parts = t.date.split("-")
                 parts.size >= 2 && parts[1].toIntOrNull() == monthPos
             }
-            val categoryOk = categoryPos == 0 ||
-                t.category.ifBlank { "Outros" }.equals(selectedCategory, ignoreCase = true)
-            val paymentOk = paymentPos == 0 ||
-                t.paymentMethod.ifBlank { PaymentMethods.NAO_INFORMADO }.equals(selectedPayment, ignoreCase = true)
+            val categoryOk = filterCategory == "Todas as categorias" ||
+                t.category.ifBlank { "Outros" }.equals(filterCategory, ignoreCase = true)
+            val paymentOk = filterPayment == "Todas as formas de pagamento" ||
+                t.paymentMethod.ifBlank { PaymentMethods.NAO_INFORMADO }.equals(filterPayment, ignoreCase = true)
 
             typeOk && dateOk && categoryOk && paymentOk
         }
@@ -164,4 +147,76 @@ class TransactionsFragment : Fragment() {
         }
         recycler.adapter = TransactionAdapter(filtered)
     }
+
+    private fun showFilterDialog() {
+        val ctx = requireContext()
+
+        fun addLabel(container: LinearLayout, text: String) {
+            container.addView(TextView(ctx).apply {
+                this.text = text
+                textSize = 12f
+                setTextColor(ContextCompat.getColor(ctx, R.color.text_secondary))
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+                ).also { it.topMargin = dpToPx(14); it.bottomMargin = dpToPx(6) }
+            })
+        }
+
+        fun spinnerFor(options: List<String>, selected: String): Spinner = Spinner(ctx).apply {
+            adapter = ArrayAdapter(ctx, android.R.layout.simple_spinner_dropdown_item, options)
+            background = ContextCompat.getDrawable(ctx, R.drawable.bg_spinner)
+            setPadding(dpToPx(12), 0, dpToPx(12), 0)
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dpToPx(46))
+            setSelection(options.indexOf(selected).let { if (it >= 0) it else 0 })
+        }
+
+        val root = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dpToPx(24), dpToPx(8), dpToPx(24), dpToPx(4))
+        }
+
+        addLabel(root, "Tipo")
+        val spType = spinnerFor(typeFilterOptions, filterType)
+        root.addView(spType)
+
+        val categories = categoryOptions()
+        addLabel(root, "Categoria")
+        val spCategory = spinnerFor(categories, filterCategory)
+        root.addView(spCategory)
+
+        addLabel(root, "Forma de pagamento")
+        val spPayment = spinnerFor(paymentFilterOptions, filterPayment)
+        root.addView(spPayment)
+
+        AlertDialog.Builder(ctx)
+            .setTitle("Filtros")
+            .setView(root)
+            .setPositiveButton("Aplicar") { _, _ ->
+                filterType = typeFilterOptions.getOrElse(spType.selectedItemPosition) { typeFilterOptions[0] }
+                filterCategory = categories.getOrElse(spCategory.selectedItemPosition) { categories[0] }
+                filterPayment = paymentFilterOptions.getOrElse(spPayment.selectedItemPosition) { paymentFilterOptions[0] }
+                applyFilter()
+            }
+            .setNeutralButton("Limpar") { _, _ ->
+                filterType = typeFilterOptions[0]
+                filterCategory = "Todas as categorias"
+                filterPayment = paymentFilterOptions[0]
+                applyFilter()
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+            .also { d ->
+                d.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(primaryBlue)
+                d.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(primaryBlue)
+                d.getButton(AlertDialog.BUTTON_NEUTRAL).setTextColor(primaryBlue)
+                d.window?.setBackgroundDrawable(
+                    GradientDrawable().apply {
+                        setColor(ContextCompat.getColor(ctx, R.color.bg_card))
+                        cornerRadius = dpToPx(20).toFloat()
+                    }
+                )
+            }
+    }
+
+    private fun dpToPx(dp: Int): Int = (dp * resources.displayMetrics.density).toInt()
 }
