@@ -34,7 +34,7 @@
             android:layout_width="match_parent"
             android:layout_height="48dp"
             android:layout_marginBottom="20dp"
-            android:text="Análise por forma de pagamento"
+            android:text="Análise por forma de pagamento/intervalo"
             android:textSize="13sp"
             style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             app:cornerRadius="12dp"
