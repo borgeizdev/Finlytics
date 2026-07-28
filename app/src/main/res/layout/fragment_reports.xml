@@ -223,13 +223,6 @@
                     android:textColor="@color/text_heading"
                     android:textSize="15sp"
                     android:textStyle="bold"
-                    android:layout_marginBottom="4dp" />
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Verde = Receitas · Vermelho = Despesas"
-                    android:textColor="@color/text_hint"
-                    android:textSize="12sp"
                     android:layout_marginBottom="12dp" />
                 <com.github.mikephil.charting.charts.BarChart
                     android:id="@+id/barChart"

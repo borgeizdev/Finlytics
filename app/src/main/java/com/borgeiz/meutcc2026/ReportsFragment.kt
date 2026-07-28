@@ -613,19 +613,7 @@ class ReportsFragment : Fragment() {
         }
         barChart.visibility = View.VISIBLE
 
-        val groupSpace = 0.4f
-        val barSpace   = 0.05f
-        val barWidth   = 0.25f
-
-        val incomeEntries  = mutableListOf<BarEntry>()
-        val expenseEntries = mutableListOf<BarEntry>()
-        val labels         = mutableListOf<String>()
-
-        allMonths.forEachIndexed { idx, month ->
-            incomeEntries.add(BarEntry(idx.toFloat(), monthlyIncome[month]  ?: 0f))
-            expenseEntries.add(BarEntry(idx.toFloat(), monthlyExpense[month] ?: 0f))
-            labels.add(monthLabels.getOrElse(month) { "$month" })
-        }
+        val labels = allMonths.map { month -> monthLabels.getOrElse(month) { "$month" } }
 
         val isDark = (resources.configuration.uiMode and
                 android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
@@ -633,41 +621,89 @@ class ReportsFragment : Fragment() {
         val axisTextColor = if (isDark) Color.parseColor("#94A3B8") else Color.parseColor("#6B7280")
         val axisGridColor = if (isDark) Color.parseColor("#2D3748") else Color.parseColor("#E5E7EB")
 
-        val incomeSet = BarDataSet(incomeEntries, "Receitas").apply {
-            color = Color.parseColor("#16A34A")
-            valueTextSize = 9f
-            valueTextColor = axisTextColor
-            valueFormatter = object : com.github.mikephil.charting.formatter.ValueFormatter() {
-                override fun getFormattedValue(value: Float) = if (value == 0f) "" else "R$${value.toInt()}"
-            }
-        }
-        val expenseSet = BarDataSet(expenseEntries, "Despesas").apply {
-            color = Color.parseColor("#DC2626")
-            valueTextSize = 9f
-            valueTextColor = axisTextColor
-            valueFormatter = object : com.github.mikephil.charting.formatter.ValueFormatter() {
-                override fun getFormattedValue(value: Float) = if (value == 0f) "" else "R$${value.toInt()}"
-            }
+        fun hideZeroFormatter() = object : com.github.mikephil.charting.formatter.ValueFormatter() {
+            override fun getFormattedValue(value: Float) = if (value == 0f) "" else "R$${value.toInt()}"
         }
 
-        val barData = BarData(incomeSet, expenseSet).apply { this.barWidth = barWidth }
-        val groupWidthVal = barWidth * 2 + barSpace * 2 + groupSpace
+        // Só receita ou só despesa têm dados no período todo: em vez de um grupo de
+        // 2 colunas com uma delas sempre zerada (e descentralizada), desenha uma
+        // única coluna por mês, centralizada sob o próprio mês.
+        val hasIncome  = monthlyIncome.values.any { it > 0f }
+        val hasExpense = monthlyExpense.values.any { it > 0f }
+        val singleSeries = hasIncome != hasExpense
+
+        val barWidth: Float
+        if (singleSeries) {
+            barWidth = 0.5f
+            val label = if (hasIncome) "Receitas" else "Despesas"
+            val color = if (hasIncome) Color.parseColor("#16A34A") else Color.parseColor("#DC2626")
+            val entries = allMonths.mapIndexed { idx, month ->
+                BarEntry(idx.toFloat(), (if (hasIncome) monthlyIncome[month] else monthlyExpense[month]) ?: 0f)
+            }
+            val dataSet = BarDataSet(entries, label).apply {
+                this.color = color
+                valueTextSize = 9f
+                valueTextColor = axisTextColor
+                valueFormatter = hideZeroFormatter()
+            }
+            barChart.data = BarData(dataSet).apply { this.barWidth = barWidth }
+        } else {
+            val groupSpace = 0.4f
+            val barSpace   = 0.05f
+            barWidth = 0.25f
+
+            val incomeEntries  = mutableListOf<BarEntry>()
+            val expenseEntries = mutableListOf<BarEntry>()
+            allMonths.forEachIndexed { idx, month ->
+                incomeEntries.add(BarEntry(idx.toFloat(), monthlyIncome[month]  ?: 0f))
+                expenseEntries.add(BarEntry(idx.toFloat(), monthlyExpense[month] ?: 0f))
+            }
+
+            val incomeSet = BarDataSet(incomeEntries, "Receitas").apply {
+                color = Color.parseColor("#16A34A")
+                valueTextSize = 9f
+                valueTextColor = axisTextColor
+                valueFormatter = hideZeroFormatter()
+            }
+            val expenseSet = BarDataSet(expenseEntries, "Despesas").apply {
+                color = Color.parseColor("#DC2626")
+                valueTextSize = 9f
+                valueTextColor = axisTextColor
+                valueFormatter = hideZeroFormatter()
+            }
+
+            val barData = BarData(incomeSet, expenseSet).apply { this.barWidth = barWidth }
+            barChart.data = barData
+            barData.groupBars(0f, groupSpace, barSpace)
+        }
 
         barChart.apply {
-            data = barData
-            barData.groupBars(0f, groupSpace, barSpace)
             description.isEnabled = false
             setFitBars(true)
             xAxis.apply {
                 valueFormatter = IndexAxisValueFormatter(labels)
                 position = XAxis.XAxisPosition.BOTTOM
-                setCenterAxisLabels(true)
                 granularity = 1f
-                axisMinimum = 0f
-                axisMaximum = groupWidthVal * allMonths.size
                 setDrawGridLines(false)
                 textSize = 11f
                 textColor = axisTextColor
+                if (singleSeries) {
+                    setCenterAxisLabels(false)
+                    axisMinimum = -0.5f
+                    axisMaximum = allMonths.size - 0.5f
+                } else {
+                    val groupWidthVal = barWidth * 2 + 0.05f * 2 + 0.4f
+                    setCenterAxisLabels(true)
+                    if (allMonths.size == 1) {
+                        // Um único mês: soma um espaço vazio simétrico dos dois lados do
+                        // grupo pra ele ficar centralizado em vez de colado na borda.
+                        axisMinimum = -groupWidthVal
+                        axisMaximum = groupWidthVal * 2
+                    } else {
+                        axisMinimum = 0f
+                        axisMaximum = groupWidthVal * allMonths.size
+                    }
+                }
             }
             axisLeft.apply {
                 axisMinimum = 0f
@@ -675,7 +711,12 @@ class ReportsFragment : Fragment() {
                 gridColor = axisGridColor
             }
             axisRight.isEnabled = false
-            legend.textColor = axisTextColor
+            legend.apply {
+                textColor = axisTextColor
+                xEntrySpace = 24f
+                formToTextSpace = 8f
+                yOffset = 12f
+            }
             setBackgroundColor(Color.TRANSPARENT)
             animateY(600)
             invalidate()
