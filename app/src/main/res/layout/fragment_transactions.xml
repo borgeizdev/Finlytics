@@ -53,25 +53,6 @@
 
     </LinearLayout>
 
-    <!-- Filtro: mês -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:paddingBottom="12dp">
-
-        <Spinner
-            android:id="@+id/spFilterMonth"
-            android:layout_width="match_parent"
-            android:layout_height="44dp"
-            android:background="@drawable/bg_spinner"
-            android:paddingStart="12dp"
-            android:paddingEnd="12dp" />
-
-    </LinearLayout>
-
     <!-- Mensagem vazia -->
     <TextView
         android:id="@+id/tvEmptyTransactions"

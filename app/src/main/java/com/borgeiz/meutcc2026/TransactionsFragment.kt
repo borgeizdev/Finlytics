@@ -6,7 +6,6 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.ImageButton
 import android.widget.LinearLayout
@@ -27,7 +26,6 @@ import java.util.Calendar
 class TransactionsFragment : Fragment() {
 
     private lateinit var recycler: RecyclerView
-    private lateinit var spFilterMonth: Spinner
     private lateinit var btnFilter: ImageButton
     private val allTransactions = mutableListOf<Transaction>()
 
@@ -35,6 +33,8 @@ class TransactionsFragment : Fragment() {
     private var filterType = typeFilterOptions[0]
     private var filterCategory = "Todas as categorias"
     private var filterPayment = "Todas as formas de pagamento"
+    // Pré-seleciona o mês atual
+    private var filterMonthPos = Calendar.getInstance().get(Calendar.MONTH) + 1
 
     private var txRepo: TransactionsRepository? = null
     private var txListener: ValueEventListener? = null
@@ -57,24 +57,10 @@ class TransactionsFragment : Fragment() {
     ): View {
         val view = inflater.inflate(R.layout.fragment_transactions, container, false)
 
-        recycler      = view.findViewById(R.id.recyclerTransactions)
-        spFilterMonth = view.findViewById(R.id.spFilterMonth)
-        btnFilter     = view.findViewById(R.id.btnFilter)
+        recycler  = view.findViewById(R.id.recyclerTransactions)
+        btnFilter = view.findViewById(R.id.btnFilter)
 
         recycler.layoutManager = LinearLayoutManager(requireContext())
-
-        // Pré-seleciona o mês atual
-        val currentMonth = Calendar.getInstance().get(Calendar.MONTH) + 1
-        spFilterMonth.adapter = ArrayAdapter(
-            requireContext(),
-            android.R.layout.simple_spinner_dropdown_item,
-            monthLabels
-        )
-        spFilterMonth.setSelection(currentMonth)
-        spFilterMonth.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>?, v: View?, pos: Int, id: Long) = applyFilter()
-            override fun onNothingSelected(parent: AdapterView<*>?) {}
-        }
 
         btnFilter.setOnClickListener { showFilterDialog() }
 
@@ -112,9 +98,7 @@ class TransactionsFragment : Fragment() {
     }
 
     private fun applyFilter() {
-        if (!::spFilterMonth.isInitialized) return
-
-        val monthPos = spFilterMonth.selectedItemPosition  // 0=Todos, 1-12=mês
+        val monthPos = filterMonthPos  // 0=Todos, 1-12=mês
 
         val filtered = allTransactions.filter { t ->
             val typeOk = when (filterType) {
@@ -175,6 +159,10 @@ class TransactionsFragment : Fragment() {
             setPadding(dpToPx(24), dpToPx(8), dpToPx(24), dpToPx(4))
         }
 
+        addLabel(root, "Mês")
+        val spMonth = spinnerFor(monthLabels, monthLabels.getOrElse(filterMonthPos) { monthLabels[0] })
+        root.addView(spMonth)
+
         addLabel(root, "Tipo")
         val spType = spinnerFor(typeFilterOptions, filterType)
         root.addView(spType)
@@ -192,12 +180,14 @@ class TransactionsFragment : Fragment() {
             .setTitle("Filtros")
             .setView(root)
             .setPositiveButton("Aplicar") { _, _ ->
+                filterMonthPos = spMonth.selectedItemPosition
                 filterType = typeFilterOptions.getOrElse(spType.selectedItemPosition) { typeFilterOptions[0] }
                 filterCategory = categories.getOrElse(spCategory.selectedItemPosition) { categories[0] }
                 filterPayment = paymentFilterOptions.getOrElse(spPayment.selectedItemPosition) { paymentFilterOptions[0] }
                 applyFilter()
             }
             .setNeutralButton("Limpar") { _, _ ->
+                filterMonthPos = 0
                 filterType = typeFilterOptions[0]
                 filterCategory = "Todas as categorias"
                 filterPayment = paymentFilterOptions[0]
