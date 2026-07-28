@@ -676,6 +676,35 @@ class ProfileFragment : Fragment() {
             }
         }
 
+        // Frame full-screen transparente — toque fora fecha o dialog. Rola porque a
+        // lista de categorias pode ser mais longa que a tela.
+        val frame = FrameLayout(ctx).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+            setOnClickListener { dialog.dismiss() }
+        }
+        val scrollWrapper = ScrollView(ctx).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+            val h = dpToPx(24)
+            val w = dpToPx(20)
+            setPadding(w, h, w, h)
+            clipToPadding = false
+            isFillViewport = true
+            setOnClickListener { /* consome o toque para não fechar */ }
+        }
+        val rootLayoutParams = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        ).also { it.gravity = Gravity.TOP }
+        root.layoutParams = rootLayoutParams
+        scrollWrapper.addView(root)
+        frame.addView(scrollWrapper)
+
         val tvTitle = TextView(ctx).apply {
             text = "Categorias"
             textSize = 18f
@@ -699,18 +728,69 @@ class ProfileFragment : Fragment() {
         }
         root.addView(tvInfo)
 
-        val containerEntries = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
+        // Abas Receita / Despesa: a aba ativa decide em qual lista (income/expense)
+        // as categorias adicionadas entram.
+        var currentTab = "receita"
+
+        val btnTabReceita = MaterialButton(ctx).apply {
+            text = "Receita"
+            textSize = 13f
+            cornerRadius = dpToPx(10)
+            layoutParams = LinearLayout.LayoutParams(0, dpToPx(42), 1f).also { it.marginEnd = dpToPx(6) }
         }
-        root.addView(containerEntries)
+        val btnTabDespesa = MaterialButton(ctx).apply {
+            text = "Despesa"
+            textSize = 13f
+            cornerRadius = dpToPx(10)
+            layoutParams = LinearLayout.LayoutParams(0, dpToPx(42), 1f)
+        }
+        val tabRow = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+            ).also { it.bottomMargin = dpToPx(16) }
+        }
+        tabRow.addView(btnTabReceita)
+        tabRow.addView(btnTabDespesa)
+        root.addView(tabRow)
 
-        data class CategoryRowRefs(
-            val etName: EditText,
-            val typeGetter: () -> String
-        )
+        val containerIncome = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        val containerExpense = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            visibility = View.GONE
+        }
+        root.addView(containerIncome)
+        root.addView(containerExpense)
 
-        fun addRow(name: String = "", type: String = "despesa") {
-            var currentType = if (type == "receita") "receita" else "despesa"
+        fun paintTabs() {
+            val activeColor  = ctx.getColor(R.color.primary)
+            val activeText   = ctx.getColor(R.color.on_primary)
+            val inactiveBg   = ctx.getColor(R.color.bg_card_subtle)
+            val inactiveText = ctx.getColor(R.color.text_secondary)
+            if (currentTab == "receita") {
+                btnTabReceita.backgroundTintList = ColorStateList.valueOf(activeColor)
+                btnTabReceita.setTextColor(activeText)
+                btnTabDespesa.backgroundTintList = ColorStateList.valueOf(inactiveBg)
+                btnTabDespesa.setTextColor(inactiveText)
+                containerIncome.visibility = View.VISIBLE
+                containerExpense.visibility = View.GONE
+            } else {
+                btnTabDespesa.backgroundTintList = ColorStateList.valueOf(activeColor)
+                btnTabDespesa.setTextColor(activeText)
+                btnTabReceita.backgroundTintList = ColorStateList.valueOf(inactiveBg)
+                btnTabReceita.setTextColor(inactiveText)
+                containerIncome.visibility = View.GONE
+                containerExpense.visibility = View.VISIBLE
+            }
+        }
+        paintTabs()
+        btnTabReceita.setOnClickListener { currentTab = "receita"; paintTabs() }
+        btnTabDespesa.setOnClickListener { currentTab = "despesa"; paintTabs() }
+
+        data class CategoryRowRefs(val etName: EditText)
+
+        fun addRow(type: String, name: String = "") {
+            val container = if (type == "receita") containerIncome else containerExpense
 
             val row = LinearLayout(ctx).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -732,66 +812,36 @@ class ProfileFragment : Fragment() {
                     .also { it.marginEnd = dpToPx(8) }
             }
 
-            val btnTypeReceita = MaterialButton(ctx).apply {
-                text = "Receita"
-                textSize = 11f
-                cornerRadius = dpToPx(10)
-                layoutParams = LinearLayout.LayoutParams(dpToPx(74), dpToPx(38)).also { it.marginEnd = dpToPx(6) }
-            }
-            val btnTypeDespesa = MaterialButton(ctx).apply {
-                text = "Despesa"
-                textSize = 11f
-                cornerRadius = dpToPx(10)
-                layoutParams = LinearLayout.LayoutParams(dpToPx(74), dpToPx(38)).also { it.marginEnd = dpToPx(6) }
-            }
-
-            fun paintType() {
-                val activeColor  = ctx.getColor(R.color.primary)
-                val activeText   = ctx.getColor(R.color.on_primary)
-                val inactiveBg   = ctx.getColor(R.color.bg_card_subtle)
-                val inactiveText = ctx.getColor(R.color.text_secondary)
-                if (currentType == "receita") {
-                    btnTypeReceita.backgroundTintList = ColorStateList.valueOf(activeColor)
-                    btnTypeReceita.setTextColor(activeText)
-                    btnTypeDespesa.backgroundTintList = ColorStateList.valueOf(inactiveBg)
-                    btnTypeDespesa.setTextColor(inactiveText)
-                } else {
-                    btnTypeDespesa.backgroundTintList = ColorStateList.valueOf(activeColor)
-                    btnTypeDespesa.setTextColor(activeText)
-                    btnTypeReceita.backgroundTintList = ColorStateList.valueOf(inactiveBg)
-                    btnTypeReceita.setTextColor(inactiveText)
-                }
-            }
-            paintType()
-            btnTypeReceita.setOnClickListener { currentType = "receita"; paintType() }
-            btnTypeDespesa.setOnClickListener { currentType = "despesa"; paintType() }
-
             val btnRemove = ImageButton(ctx).apply {
                 setImageDrawable(androidx.core.content.ContextCompat.getDrawable(ctx, R.drawable.ic_remove))
                 setBackgroundColor(android.graphics.Color.TRANSPARENT)
                 layoutParams = LinearLayout.LayoutParams(dpToPx(40), dpToPx(40))
                 contentDescription = "Remover"
-                setOnClickListener { containerEntries.removeView(row) }
+                setOnClickListener { container.removeView(row) }
             }
 
             row.addView(etName)
-            row.addView(btnTypeReceita)
-            row.addView(btnTypeDespesa)
             row.addView(btnRemove)
-            row.tag = CategoryRowRefs(etName) { currentType }
-            containerEntries.addView(row)
+            row.tag = CategoryRowRefs(etName)
+            container.addView(row)
+        }
+
+        fun collectFrom(container: LinearLayout, result: MutableList<String>): Boolean {
+            for (i in 0 until container.childCount) {
+                val refs = container.getChildAt(i).tag as? CategoryRowRefs ?: continue
+                val name = refs.etName.text.toString().trim()
+                if (name.isEmpty()) { refs.etName.error = "Informe um nome"; return false }
+                refs.etName.error = null
+                result.add(name)
+            }
+            return true
         }
 
         fun collectCategories(): CategoryConfig? {
             val income = mutableListOf<String>()
             val expense = mutableListOf<String>()
-            for (i in 0 until containerEntries.childCount) {
-                val refs = containerEntries.getChildAt(i).tag as? CategoryRowRefs ?: continue
-                val name = refs.etName.text.toString().trim()
-                if (name.isEmpty()) { refs.etName.error = "Informe um nome"; return null }
-                refs.etName.error = null
-                if (refs.typeGetter() == "receita") income.add(name) else expense.add(name)
-            }
+            if (!collectFrom(containerIncome, income)) return null
+            if (!collectFrom(containerExpense, expense)) return null
             return CategoryConfig(
                 income = income.distinctBy { it.lowercase() },
                 expense = expense.distinctBy { it.lowercase() }
@@ -840,12 +890,17 @@ class ProfileFragment : Fragment() {
         root.addView(btnRow)
 
         categoryRepo.loadConfig { config ->
-            containerEntries.removeAllViews()
-            config.income.forEach { addRow(it, "receita") }
-            config.expense.forEach { addRow(it, "despesa") }
+            containerIncome.removeAllViews()
+            containerExpense.removeAllViews()
+            config.income.forEach { addRow("receita", it) }
+            config.expense.forEach { addRow("despesa", it) }
+            // Sem nada salvo, centraliza o card na tela; com itens, mantém no topo (rolável).
+            val isEmpty = config.income.isEmpty() && config.expense.isEmpty()
+            rootLayoutParams.gravity = if (isEmpty) Gravity.CENTER else Gravity.TOP
+            root.layoutParams = rootLayoutParams
         }
 
-        btnAddEntry.setOnClickListener { addRow() }
+        btnAddEntry.setOnClickListener { addRow(currentTab) }
         btnCancel.setOnClickListener { dialog.dismiss() }
         btnSave.setOnClickListener {
             val config = collectCategories() ?: return@setOnClickListener
@@ -858,33 +913,6 @@ class ProfileFragment : Fragment() {
                     Toast.makeText(ctx, "Erro: ${it.message}", Toast.LENGTH_LONG).show()
                 }
         }
-
-        // Frame full-screen transparente — toque fora fecha o dialog. Rola porque a
-        // lista de categorias pode ser mais longa que a tela.
-        val frame = FrameLayout(ctx).apply {
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            )
-            setOnClickListener { dialog.dismiss() }
-        }
-        val scrollWrapper = ScrollView(ctx).apply {
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            )
-            val h = dpToPx(24)
-            val w = dpToPx(20)
-            setPadding(w, h, w, h)
-            clipToPadding = false
-            setOnClickListener { /* consome o toque para não fechar */ }
-        }
-        root.layoutParams = FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT,
-            FrameLayout.LayoutParams.WRAP_CONTENT
-        )
-        scrollWrapper.addView(root)
-        frame.addView(scrollWrapper)
 
         dialog.setContentView(frame)
         dialog.window?.apply {
