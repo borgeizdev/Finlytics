@@ -100,9 +100,20 @@ class MainActivity : AppCompatActivity() {
     private fun navigateTo(fragment: Fragment, tab: Int) {
         val now = System.currentTimeMillis()
         if (now - lastNavMs < 200) return
-        if (currentTab == tab && supportFragmentManager.findFragmentById(R.id.frameContainer) != null) return
+        val current = supportFragmentManager.findFragmentById(R.id.frameContainer)
+        // currentTab por si só não basta: telas empilhadas por dentro de uma aba (ex:
+        // PaymentMethodReportFragment a partir de Relatórios) não mudam currentTab,
+        // então sem checar a back stack o toque na aba já ativa vira um no-op.
+        val alreadyAtRoot = currentTab == tab &&
+            current != null &&
+            current::class == fragment::class &&
+            supportFragmentManager.backStackEntryCount == 0
+        if (alreadyAtRoot) return
         lastNavMs = now
         currentTab = tab
+        if (supportFragmentManager.backStackEntryCount > 0) {
+            supportFragmentManager.popBackStackImmediate(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE)
+        }
         supportFragmentManager.beginTransaction()
             .replace(R.id.frameContainer, fragment)
             .commitAllowingStateLoss()

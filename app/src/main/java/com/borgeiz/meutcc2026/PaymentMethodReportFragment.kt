@@ -7,6 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
+import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.TextView
@@ -44,12 +45,15 @@ class PaymentMethodReportFragment : Fragment() {
     ): View {
         val view = inflater.inflate(R.layout.fragment_payment_method_report, container, false)
 
+        val btnBack      = view.findViewById<ImageButton>(R.id.btnBack)
         val etStartDate  = view.findViewById<TextInputEditText>(R.id.etStartDate)
         val etEndDate    = view.findViewById<TextInputEditText>(R.id.etEndDate)
         val spTypeFilter = view.findViewById<Spinner>(R.id.spTypeFilter)
         val tvTotal      = view.findViewById<TextView>(R.id.tvPeriodTotal)
         val pieChart     = view.findViewById<PieChart>(R.id.pieChartPaymentMethod)
         val llBreakdown  = view.findViewById<LinearLayout>(R.id.llPaymentBreakdown)
+
+        btnBack.setOnClickListener { parentFragmentManager.popBackStack() }
 
         pieChart.setNoDataText("")
 
