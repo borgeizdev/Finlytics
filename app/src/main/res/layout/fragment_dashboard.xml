@@ -305,6 +305,7 @@
             app:cardBackgroundColor="@color/bg_card">
 
             <LinearLayout
+                android:id="@+id/rowPaymentMethodAnalysisHome"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
