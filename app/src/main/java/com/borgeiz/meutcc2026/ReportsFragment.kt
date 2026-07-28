@@ -634,7 +634,7 @@ class ReportsFragment : Fragment() {
 
         val barWidth: Float
         if (singleSeries) {
-            barWidth = 0.5f
+            barWidth = 0.3f
             val label = if (hasIncome) "Receitas" else "Despesas"
             val color = if (hasIncome) Color.parseColor("#16A34A") else Color.parseColor("#DC2626")
             val entries = allMonths.mapIndexed { idx, month ->
