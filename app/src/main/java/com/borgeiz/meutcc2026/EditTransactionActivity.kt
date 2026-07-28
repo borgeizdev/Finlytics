@@ -27,6 +27,7 @@ class EditTransactionActivity : AppCompatActivity() {
         val etAmount      = findViewById<TextInputEditText>(R.id.etEditAmount)
         val spCategory    = findViewById<Spinner>(R.id.spEditCategory)
         val spPaymentMethod = findViewById<Spinner>(R.id.spEditPaymentMethod)
+        val tvPaymentMethodLabel = findViewById<android.widget.TextView>(R.id.tvEditPaymentMethodLabel)
         val etDate        = findViewById<TextInputEditText>(R.id.etEditDate)
         val etDescription = findViewById<TextInputEditText>(R.id.etEditDescription)
         val btnUpdate     = findViewById<Button>(R.id.btnUpdate)
@@ -38,6 +39,12 @@ class EditTransactionActivity : AppCompatActivity() {
         val paymentMethod = intent.getStringExtra("paymentMethod") ?: ""
 
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: run { finish(); return }
+
+        // Receita não tem "forma de pagamento" no sentido de Pix/cartão/dinheiro.
+        if (type == "receita") {
+            tvPaymentMethodLabel.visibility = android.view.View.GONE
+            spPaymentMethod.visibility = android.view.View.GONE
+        }
 
         etTitle.setText(intent.getStringExtra("title"))
         etAmount.setText(intent.getDoubleExtra("amount", 0.0).let {
@@ -112,7 +119,7 @@ class EditTransactionActivity : AppCompatActivity() {
                 category    = spCategory.selectedItem?.toString() ?: "",
                 date        = etDate.text?.toString()?.trim() ?: "",
                 description = etDescription.text?.toString()?.trim() ?: "",
-                paymentMethod = if (selectedPaymentMethod == PaymentMethods.NAO_INFORMADO) "" else selectedPaymentMethod
+                paymentMethod = if (type == "receita" || selectedPaymentMethod == PaymentMethods.NAO_INFORMADO) "" else selectedPaymentMethod
             )
             ref.setValue(transaction).addOnSuccessListener {
                 Toast.makeText(this, "Atualizado!", Toast.LENGTH_SHORT).show()

@@ -31,6 +31,7 @@ class AddTransactionFragment : Fragment() {
     private lateinit var btnTypeDespesa: MaterialButton
     private lateinit var actvCategory: AutoCompleteTextView
     private lateinit var actvPaymentMethod: AutoCompleteTextView
+    private lateinit var tilPaymentMethod: com.google.android.material.textfield.TextInputLayout
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -43,6 +44,7 @@ class AddTransactionFragment : Fragment() {
         btnTypeDespesa = view.findViewById(R.id.btnTypeDespesa)
         actvCategory   = view.findViewById(R.id.actvCategory)
         actvPaymentMethod = view.findViewById(R.id.actvPaymentMethod)
+        tilPaymentMethod = view.findViewById(R.id.tilPaymentMethod)
 
         val paymentAdapter = ArrayAdapter(
             requireContext(), android.R.layout.simple_dropdown_item_1line, PaymentMethods.ALL
@@ -108,7 +110,7 @@ class AddTransactionFragment : Fragment() {
                     category    = actvCategory.text.toString(),
                     date        = dateStr,
                     description = descStr,
-                    paymentMethod = actvPaymentMethod.text.toString()
+                    paymentMethod = if (typeSnapshot == "receita") "" else actvPaymentMethod.text.toString()
                 )
             ).addOnSuccessListener {
                 val ctx = context ?: return@addOnSuccessListener
@@ -156,5 +158,8 @@ class AddTransactionFragment : Fragment() {
         val adapter = ArrayAdapter(ctx, android.R.layout.simple_dropdown_item_1line, cats)
         actvCategory.setAdapter(adapter)
         actvCategory.setText(cats.firstOrNull() ?: "", false)
+
+        // Receita não tem "forma de pagamento" no sentido de Pix/cartão/dinheiro.
+        tilPaymentMethod.visibility = if (type == "receita") View.GONE else View.VISIBLE
     }
 }
