@@ -563,13 +563,16 @@ class ReportsFragment : Fragment() {
         val maxIdx = totals.indices.maxByOrNull { totals[it] } ?: -1
 
         val isDark = isDarkMode(requireContext())
-        val neutralColor = if (isDark) Color.parseColor("#1E293B") else Color.parseColor("#E2E8F0")
+        // Todos os dias ficam coloridos (não só o de maior gasto) para dar pra
+        // comparar as barras entre si; o dia de pico só se destaca com um tom
+        // mais forte, sem apagar os demais em cinza.
+        val regularColor = Color.parseColor("#93C5FD")
         val peakColor = Color.parseColor("#2563EB")
         val axisTextColor = if (isDark) Color.parseColor("#94A3B8") else Color.parseColor("#6B7280")
 
         val entries = totals.mapIndexed { i, v -> BarEntry(i.toFloat(), v.toFloat()) }
         val dataSet = BarDataSet(entries, "").apply {
-            colors = totals.indices.map { if (it == maxIdx && totals[it] > 0.0) peakColor else neutralColor }.toMutableList()
+            colors = totals.indices.map { if (it == maxIdx && totals[it] > 0.0) peakColor else regularColor }.toMutableList()
             setDrawValues(false)
         }
 
