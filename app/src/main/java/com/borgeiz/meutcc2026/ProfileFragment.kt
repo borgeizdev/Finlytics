@@ -464,6 +464,7 @@ class ProfileFragment : Fragment() {
     private fun showRecurringTypeDialog(uid: String, type: String) {
         val ctx = requireContext()
         val recurringRepo = RecurringRepository(uid)
+        val categoryRepo = CategoryRepository(uid)
         val typeLabel = if (type == "receita") "Receitas" else "Despesas"
 
         val dialog = android.app.Dialog(ctx)
@@ -552,10 +553,23 @@ class ProfileFragment : Fragment() {
         data class RowRefs(
             val id: String,
             val etTitle: EditText,
-            val etCategory: EditText,
+            val etCategory: AutoCompleteTextView,
             val etAmount: EditText,
             val etDay: EditText
         )
+
+        // Categorias salvas em Perfil > Configurações > Categorias, carregadas de forma
+        // assíncrona logo abaixo; cada linha usa esta lista para popular seu seletor.
+        var categoryOptions = listOf<String>()
+
+        fun categoryAdapter() = ArrayAdapter(ctx, android.R.layout.simple_dropdown_item_1line, categoryOptions)
+
+        fun refreshCategoryAdapters() {
+            for (i in 0 until container.childCount) {
+                val refs = container.getChildAt(i).tag as? RowRefs ?: continue
+                refs.etCategory.setAdapter(categoryAdapter())
+            }
+        }
 
         fun addRow(item: RecurringItem? = null) {
             val rowId = item?.id?.takeIf { it.isNotBlank() } ?: java.util.UUID.randomUUID().toString()
@@ -606,9 +620,10 @@ class ProfileFragment : Fragment() {
                 )
             }
 
-            val etCategory = EditText(ctx).apply {
+            val etCategory = AutoCompleteTextView(ctx).apply {
                 hint = "Categoria"
-                setText(item?.category ?: "")
+                setText(item?.category ?: "", false)
+                inputType = android.text.InputType.TYPE_NULL
                 isSingleLine = true
                 setHintTextColor(ctx.getColor(R.color.text_hint))
                 setTextColor(ctx.getColor(R.color.text_heading))
@@ -616,6 +631,8 @@ class ProfileFragment : Fragment() {
                 setPadding(dpToPx(12), dpToPx(14), dpToPx(12), dpToPx(14))
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 2f)
                     .also { it.marginEnd = dpToPx(8) }
+                setAdapter(categoryAdapter())
+                setOnClickListener { showDropDown() }
             }
             val etAmount = EditText(ctx).apply {
                 hint = "Valor (R$)"
@@ -730,6 +747,12 @@ class ProfileFragment : Fragment() {
 
         // Guarda os itens do outro tipo (não editados nesta tela) para não perdê-los ao salvar.
         var otherTypeItems = listOf<RecurringItem>()
+
+        categoryRepo.loadConfig { catConfig ->
+            if (!isAdded) return@loadConfig
+            categoryOptions = if (type == "receita") catConfig.income else catConfig.expense
+            refreshCategoryAdapters()
+        }
 
         recurringRepo.loadConfig { config ->
             val items = config?.items ?: emptyList()
