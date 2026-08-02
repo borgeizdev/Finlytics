@@ -21,7 +21,6 @@ import com.borgeiz.meutcc2026.model.PaymentMethods
 import com.borgeiz.meutcc2026.model.Transaction
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.ValueEventListener
-import java.util.Calendar
 
 class TransactionsFragment : Fragment() {
 
@@ -30,11 +29,16 @@ class TransactionsFragment : Fragment() {
     private val allTransactions = mutableListOf<Transaction>()
 
     private val typeFilterOptions = listOf("Todos os tipos", "Receitas", "Despesas")
-    private var filterType = typeFilterOptions[0]
-    private var filterCategory = "Todas as categorias"
-    private var filterPayment = "Todas as formas de pagamento"
-    // Pré-seleciona o mês atual
-    private var filterMonthPos = Calendar.getInstance().get(Calendar.MONTH) + 1
+
+    companion object {
+        // Em memória (não persiste no disco): mantém a seleção do usuário ao
+        // navegar entre abas durante a sessão, mas volta pro padrão "Todos"
+        // quando o processo do app morre e é reaberto.
+        private var filterType = "Todos os tipos"
+        private var filterCategory = "Todas as categorias"
+        private var filterPayment = "Todas as formas de pagamento"
+        private var filterMonthPos = 0
+    }
 
     private var txRepo: TransactionsRepository? = null
     private var txListener: ValueEventListener? = null
