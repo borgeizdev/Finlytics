@@ -755,14 +755,19 @@ class ProfileFragment : Fragment() {
         }
 
         recurringRepo.loadConfig { config ->
+            if (!isAdded) return@loadConfig
             val items = config?.items ?: emptyList()
             otherTypeItems = items.filter { it.type != type }
             val typeItems = items.filter { it.type == type }
             container.removeAllViews()
             typeItems.forEach { addRow(it) }
             // Sem nada salvo, centraliza o card na tela; com itens, mantém no topo (rolável).
+            // A gravidade só é decidida aqui, então o dialog só aparece (dialog.show(),
+            // mais abaixo) depois de já sabermos onde ele deve ficar — evita o "pulo"
+            // de aparecer no topo e só depois saltar pro meio da tela.
             rootLayoutParams.gravity = if (typeItems.isEmpty()) Gravity.CENTER else Gravity.TOP
             root.layoutParams = rootLayoutParams
+            dialog.show()
         }
 
         btnAddEntry.setOnClickListener { addRow() }
@@ -798,7 +803,6 @@ class ProfileFragment : Fragment() {
             addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
             setDimAmount(0.5f)
         }
-        dialog.show()
     }
 
     private fun showCategoriesDialog(uid: String) {
@@ -1032,14 +1036,19 @@ class ProfileFragment : Fragment() {
         root.addView(btnRow)
 
         categoryRepo.loadConfig { config ->
+            if (!isAdded) return@loadConfig
             containerIncome.removeAllViews()
             containerExpense.removeAllViews()
             config.income.forEach { addRow("receita", it) }
             config.expense.forEach { addRow("despesa", it) }
             // Sem nada salvo, centraliza o card na tela; com itens, mantém no topo (rolável).
+            // A gravidade só é decidida aqui, então o dialog só aparece (dialog.show(),
+            // mais abaixo) depois de já sabermos onde ele deve ficar — evita o "pulo"
+            // de aparecer no topo e só depois saltar pro meio da tela.
             val isEmpty = config.income.isEmpty() && config.expense.isEmpty()
             rootLayoutParams.gravity = if (isEmpty) Gravity.CENTER else Gravity.TOP
             root.layoutParams = rootLayoutParams
+            dialog.show()
         }
 
         btnAddEntry.setOnClickListener { addRow(currentTab) }
@@ -1067,7 +1076,6 @@ class ProfileFragment : Fragment() {
             addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
             setDimAmount(0.5f)
         }
-        dialog.show()
     }
 
     private fun showGoalsDialog(uid: String) {
