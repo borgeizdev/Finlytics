@@ -497,34 +497,43 @@ class ProfileFragment : Fragment() {
         val hPad = dpToPx(24)
         val wPad = dpToPx(20)
 
-        fun attachCentered() {
-            root.layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
-            ).also {
-                it.gravity = Gravity.CENTER
-                it.leftMargin = wPad
-                it.rightMargin = wPad
-            }
-            frame.addView(root)
-        }
-
-        fun attachScrollableTop() {
-            val scrollWrapper = ScrollView(ctx).apply {
-                layoutParams = FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.MATCH_PARENT
-                )
-                setPadding(wPad, hPad, wPad, hPad)
-                clipToPadding = false
-                setOnClickListener { /* consome o toque para não fechar */ }
-            }
-            root.layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
+        // Decide pelo tamanho REAL do conteúdo já montado (não por "tem item ou não"):
+        // mede "root" com a largura disponível e compara com a altura da tela. Se
+        // couber, centraliza sem ScrollView; se não couber, ancora no topo e rola.
+        fun attachRoot() {
+            val maxWidth = resources.displayMetrics.widthPixels - 2 * wPad
+            root.measure(
+                android.view.View.MeasureSpec.makeMeasureSpec(maxWidth, android.view.View.MeasureSpec.EXACTLY),
+                android.view.View.MeasureSpec.makeMeasureSpec(0, android.view.View.MeasureSpec.UNSPECIFIED)
             )
-            scrollWrapper.addView(root)
-            frame.addView(scrollWrapper)
+            val availableHeight = resources.displayMetrics.heightPixels - 2 * hPad
+            if (root.measuredHeight <= availableHeight) {
+                root.layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT
+                ).also {
+                    it.gravity = Gravity.CENTER
+                    it.leftMargin = wPad
+                    it.rightMargin = wPad
+                }
+                frame.addView(root)
+            } else {
+                val scrollWrapper = ScrollView(ctx).apply {
+                    layoutParams = FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                        FrameLayout.LayoutParams.MATCH_PARENT
+                    )
+                    setPadding(wPad, hPad, wPad, hPad)
+                    clipToPadding = false
+                    setOnClickListener { /* consome o toque para não fechar */ }
+                }
+                root.layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT
+                )
+                scrollWrapper.addView(root)
+                frame.addView(scrollWrapper)
+            }
         }
 
         dialog.setContentView(frame)
@@ -783,8 +792,7 @@ class ProfileFragment : Fragment() {
             val typeItems = items.filter { it.type == type }
             container.removeAllViews()
             typeItems.forEach { addRow(it) }
-            // Sem nada salvo, centraliza o card na tela; com itens, mantém no topo (rolável).
-            if (typeItems.isEmpty()) attachCentered() else attachScrollableTop()
+            attachRoot()
         }
 
         btnAddEntry.setOnClickListener { addRow() }
@@ -844,34 +852,43 @@ class ProfileFragment : Fragment() {
         val hPad = dpToPx(24)
         val wPad = dpToPx(20)
 
-        fun attachCentered() {
-            root.layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
-            ).also {
-                it.gravity = Gravity.CENTER
-                it.leftMargin = wPad
-                it.rightMargin = wPad
-            }
-            frame.addView(root)
-        }
-
-        fun attachScrollableTop() {
-            val scrollWrapper = ScrollView(ctx).apply {
-                layoutParams = FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.MATCH_PARENT
-                )
-                setPadding(wPad, hPad, wPad, hPad)
-                clipToPadding = false
-                setOnClickListener { /* consome o toque para não fechar */ }
-            }
-            root.layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
+        // Decide pelo tamanho REAL do conteúdo já montado (não por "tem item ou não"):
+        // mede "root" com a largura disponível e compara com a altura da tela. Se
+        // couber, centraliza sem ScrollView; se não couber, ancora no topo e rola.
+        fun attachRoot() {
+            val maxWidth = resources.displayMetrics.widthPixels - 2 * wPad
+            root.measure(
+                android.view.View.MeasureSpec.makeMeasureSpec(maxWidth, android.view.View.MeasureSpec.EXACTLY),
+                android.view.View.MeasureSpec.makeMeasureSpec(0, android.view.View.MeasureSpec.UNSPECIFIED)
             )
-            scrollWrapper.addView(root)
-            frame.addView(scrollWrapper)
+            val availableHeight = resources.displayMetrics.heightPixels - 2 * hPad
+            if (root.measuredHeight <= availableHeight) {
+                root.layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT
+                ).also {
+                    it.gravity = Gravity.CENTER
+                    it.leftMargin = wPad
+                    it.rightMargin = wPad
+                }
+                frame.addView(root)
+            } else {
+                val scrollWrapper = ScrollView(ctx).apply {
+                    layoutParams = FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                        FrameLayout.LayoutParams.MATCH_PARENT
+                    )
+                    setPadding(wPad, hPad, wPad, hPad)
+                    clipToPadding = false
+                    setOnClickListener { /* consome o toque para não fechar */ }
+                }
+                root.layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT
+                )
+                scrollWrapper.addView(root)
+                frame.addView(scrollWrapper)
+            }
         }
 
         dialog.setContentView(frame)
@@ -1077,9 +1094,7 @@ class ProfileFragment : Fragment() {
             containerExpense.removeAllViews()
             config.income.forEach { addRow("receita", it) }
             config.expense.forEach { addRow("despesa", it) }
-            // Sem nada salvo, centraliza o card na tela; com itens, mantém no topo (rolável).
-            val isEmpty = config.income.isEmpty() && config.expense.isEmpty()
-            if (isEmpty) attachCentered() else attachScrollableTop()
+            attachRoot()
         }
 
         btnAddEntry.setOnClickListener { addRow(currentTab) }
@@ -1132,34 +1147,43 @@ class ProfileFragment : Fragment() {
         val hPad = dpToPx(24)
         val wPad = dpToPx(20)
 
-        fun attachCentered() {
-            root.layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
-            ).also {
-                it.gravity = Gravity.CENTER
-                it.leftMargin = wPad
-                it.rightMargin = wPad
-            }
-            frame.addView(root)
-        }
-
-        fun attachScrollableTop() {
-            val scrollWrapper = ScrollView(ctx).apply {
-                layoutParams = FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.MATCH_PARENT
-                )
-                setPadding(wPad, hPad, wPad, hPad)
-                clipToPadding = false
-                setOnClickListener { /* consome o toque para não fechar */ }
-            }
-            root.layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
+        // Decide pelo tamanho REAL do conteúdo já montado (não por "tem item ou não"):
+        // mede "root" com a largura disponível e compara com a altura da tela. Se
+        // couber, centraliza sem ScrollView; se não couber, ancora no topo e rola.
+        fun attachRoot() {
+            val maxWidth = resources.displayMetrics.widthPixels - 2 * wPad
+            root.measure(
+                android.view.View.MeasureSpec.makeMeasureSpec(maxWidth, android.view.View.MeasureSpec.EXACTLY),
+                android.view.View.MeasureSpec.makeMeasureSpec(0, android.view.View.MeasureSpec.UNSPECIFIED)
             )
-            scrollWrapper.addView(root)
-            frame.addView(scrollWrapper)
+            val availableHeight = resources.displayMetrics.heightPixels - 2 * hPad
+            if (root.measuredHeight <= availableHeight) {
+                root.layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT
+                ).also {
+                    it.gravity = Gravity.CENTER
+                    it.leftMargin = wPad
+                    it.rightMargin = wPad
+                }
+                frame.addView(root)
+            } else {
+                val scrollWrapper = ScrollView(ctx).apply {
+                    layoutParams = FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                        FrameLayout.LayoutParams.MATCH_PARENT
+                    )
+                    setPadding(wPad, hPad, wPad, hPad)
+                    clipToPadding = false
+                    setOnClickListener { /* consome o toque para não fechar */ }
+                }
+                root.layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT
+                )
+                scrollWrapper.addView(root)
+                frame.addView(scrollWrapper)
+            }
         }
 
         dialog.setContentView(frame)
@@ -1429,8 +1453,7 @@ class ProfileFragment : Fragment() {
                 goalConfig.items.forEach { goal ->
                     if (goal.type == "lucro") addLucroRow(goal) else addGastoRow(goal)
                 }
-                // Sem nada salvo, centraliza o card na tela; com itens, mantém no topo (rolável).
-                if (goalConfig.items.isEmpty()) attachCentered() else attachScrollableTop()
+                attachRoot()
             }
         }
 
