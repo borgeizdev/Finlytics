@@ -480,9 +480,12 @@ class ProfileFragment : Fragment() {
             }
         }
 
-        // Frame full-screen transparente — toque fora fecha o dialog. O conteúdo
-        // rola dentro de um ScrollView porque a lista de itens recorrentes pode
-        // crescer além da altura da tela (ao contrário da antiga entrada única de salário).
+        // Frame full-screen transparente — toque fora fecha o dialog. "root" só é
+        // anexado a ele depois de sabermos (após carregar os dados) se cabe
+        // centralizado ou se precisa rolar do topo — dialog.show() já roda na hora
+        // (sem esperar a rede) só com o frame vazio; o card aparece já no lugar
+        // certo, sem "pulo" nem sensação de lentidão. Antes isso usava um truque
+        // com ScrollView.isFillViewport que não centralizava de forma confiável.
         val frame = FrameLayout(ctx).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -490,41 +493,39 @@ class ProfileFragment : Fragment() {
             )
             setOnClickListener { dialog.dismiss() }
         }
-        val scrollWrapper = ScrollView(ctx).apply {
-            layoutParams = FrameLayout.LayoutParams(
+
+        val hPad = dpToPx(24)
+        val wPad = dpToPx(20)
+
+        fun attachCentered() {
+            root.layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            )
-            val h = dpToPx(24)
-            val w = dpToPx(20)
-            setPadding(w, h, w, h)
-            clipToPadding = false
-            isFillViewport = true
-            setOnClickListener { /* consome o toque para não fechar */ }
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            ).also {
+                it.gravity = Gravity.CENTER
+                it.leftMargin = wPad
+                it.rightMargin = wPad
+            }
+            frame.addView(root)
         }
-        // isFillViewport estica o filho direto do ScrollView para ocupar a tela
-        // toda quando o conteúdo é menor que ela. Sem esse wrapper transparente
-        // no meio, era o próprio "root" (o card com fundo arredondado) que virava
-        // o filho direto e ficava esticado do topo até embaixo mesmo com 1-2 itens.
-        val scrollContent = FrameLayout(ctx).apply {
-            layoutParams = FrameLayout.LayoutParams(
+
+        fun attachScrollableTop() {
+            val scrollWrapper = ScrollView(ctx).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+                )
+                setPadding(wPad, hPad, wPad, hPad)
+                clipToPadding = false
+                setOnClickListener { /* consome o toque para não fechar */ }
+            }
+            root.layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT
             )
+            scrollWrapper.addView(root)
+            frame.addView(scrollWrapper)
         }
-        val rootLayoutParams = FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT,
-            FrameLayout.LayoutParams.WRAP_CONTENT
-        ).also { it.gravity = Gravity.CENTER }
-        root.layoutParams = rootLayoutParams
-        // Fica invisível até sabermos (após carregar os dados) se o card deve
-        // abrir centralizado ou no topo — evita tanto o "pulo" de posição
-        // quanto a sensação de lentidão, já que o dialog.show() abaixo roda na
-        // hora, sem esperar a rede; só o conteúdo aparece depois, já no lugar certo.
-        root.visibility = View.INVISIBLE
-        scrollContent.addView(root)
-        scrollWrapper.addView(scrollContent)
-        frame.addView(scrollWrapper)
 
         dialog.setContentView(frame)
         dialog.window?.apply {
@@ -783,9 +784,7 @@ class ProfileFragment : Fragment() {
             container.removeAllViews()
             typeItems.forEach { addRow(it) }
             // Sem nada salvo, centraliza o card na tela; com itens, mantém no topo (rolável).
-            rootLayoutParams.gravity = if (typeItems.isEmpty()) Gravity.CENTER else Gravity.TOP
-            root.layoutParams = rootLayoutParams
-            root.visibility = View.VISIBLE
+            if (typeItems.isEmpty()) attachCentered() else attachScrollableTop()
         }
 
         btnAddEntry.setOnClickListener { addRow() }
@@ -828,8 +827,12 @@ class ProfileFragment : Fragment() {
             }
         }
 
-        // Frame full-screen transparente — toque fora fecha o dialog. Rola porque a
-        // lista de categorias pode ser mais longa que a tela.
+        // Frame full-screen transparente — toque fora fecha o dialog. "root" só é
+        // anexado a ele depois de sabermos (após carregar os dados) se cabe
+        // centralizado ou se precisa rolar do topo — dialog.show() já roda na hora
+        // (sem esperar a rede) só com o frame vazio; o card aparece já no lugar
+        // certo, sem "pulo" nem sensação de lentidão. Antes isso usava um truque
+        // com ScrollView.isFillViewport que não centralizava de forma confiável.
         val frame = FrameLayout(ctx).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -837,41 +840,39 @@ class ProfileFragment : Fragment() {
             )
             setOnClickListener { dialog.dismiss() }
         }
-        val scrollWrapper = ScrollView(ctx).apply {
-            layoutParams = FrameLayout.LayoutParams(
+
+        val hPad = dpToPx(24)
+        val wPad = dpToPx(20)
+
+        fun attachCentered() {
+            root.layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            )
-            val h = dpToPx(24)
-            val w = dpToPx(20)
-            setPadding(w, h, w, h)
-            clipToPadding = false
-            isFillViewport = true
-            setOnClickListener { /* consome o toque para não fechar */ }
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            ).also {
+                it.gravity = Gravity.CENTER
+                it.leftMargin = wPad
+                it.rightMargin = wPad
+            }
+            frame.addView(root)
         }
-        // isFillViewport estica o filho direto do ScrollView para ocupar a tela
-        // toda quando o conteúdo é menor que ela. Sem esse wrapper transparente
-        // no meio, era o próprio "root" (o card com fundo arredondado) que virava
-        // o filho direto e ficava esticado do topo até embaixo mesmo vazio.
-        val scrollContent = FrameLayout(ctx).apply {
-            layoutParams = FrameLayout.LayoutParams(
+
+        fun attachScrollableTop() {
+            val scrollWrapper = ScrollView(ctx).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+                )
+                setPadding(wPad, hPad, wPad, hPad)
+                clipToPadding = false
+                setOnClickListener { /* consome o toque para não fechar */ }
+            }
+            root.layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT
             )
+            scrollWrapper.addView(root)
+            frame.addView(scrollWrapper)
         }
-        val rootLayoutParams = FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT,
-            FrameLayout.LayoutParams.WRAP_CONTENT
-        ).also { it.gravity = Gravity.CENTER }
-        root.layoutParams = rootLayoutParams
-        // Fica invisível até sabermos (após carregar os dados) se o card deve
-        // abrir centralizado ou no topo — evita tanto o "pulo" de posição
-        // quanto a sensação de lentidão, já que o dialog.show() abaixo roda na
-        // hora, sem esperar a rede; só o conteúdo aparece depois, já no lugar certo.
-        root.visibility = View.INVISIBLE
-        scrollContent.addView(root)
-        scrollWrapper.addView(scrollContent)
-        frame.addView(scrollWrapper)
 
         dialog.setContentView(frame)
         dialog.window?.apply {
@@ -1078,9 +1079,7 @@ class ProfileFragment : Fragment() {
             config.expense.forEach { addRow("despesa", it) }
             // Sem nada salvo, centraliza o card na tela; com itens, mantém no topo (rolável).
             val isEmpty = config.income.isEmpty() && config.expense.isEmpty()
-            rootLayoutParams.gravity = if (isEmpty) Gravity.CENTER else Gravity.TOP
-            root.layoutParams = rootLayoutParams
-            root.visibility = View.VISIBLE
+            if (isEmpty) attachCentered() else attachScrollableTop()
         }
 
         btnAddEntry.setOnClickListener { addRow(currentTab) }
@@ -1116,8 +1115,12 @@ class ProfileFragment : Fragment() {
             }
         }
 
-        // Frame full-screen transparente — toque fora fecha o dialog. Rola porque a
-        // lista de metas pode ser mais longa que a tela.
+        // Frame full-screen transparente — toque fora fecha o dialog. "root" só é
+        // anexado a ele depois de sabermos (após carregar os dados) se cabe
+        // centralizado ou se precisa rolar do topo — dialog.show() já roda na hora
+        // (sem esperar a rede) só com o frame vazio; o card aparece já no lugar
+        // certo, sem "pulo" nem sensação de lentidão. Antes isso usava um truque
+        // com ScrollView.isFillViewport que não centralizava de forma confiável.
         val frame = FrameLayout(ctx).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -1125,41 +1128,39 @@ class ProfileFragment : Fragment() {
             )
             setOnClickListener { dialog.dismiss() }
         }
-        val scrollWrapper = ScrollView(ctx).apply {
-            layoutParams = FrameLayout.LayoutParams(
+
+        val hPad = dpToPx(24)
+        val wPad = dpToPx(20)
+
+        fun attachCentered() {
+            root.layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            )
-            val h = dpToPx(24)
-            val w = dpToPx(20)
-            setPadding(w, h, w, h)
-            clipToPadding = false
-            isFillViewport = true
-            setOnClickListener { /* consome o toque para não fechar */ }
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            ).also {
+                it.gravity = Gravity.CENTER
+                it.leftMargin = wPad
+                it.rightMargin = wPad
+            }
+            frame.addView(root)
         }
-        // isFillViewport estica o filho direto do ScrollView para ocupar a tela
-        // toda quando o conteúdo é menor que ela. Sem esse wrapper transparente
-        // no meio, era o próprio "root" (o card com fundo arredondado) que virava
-        // o filho direto e ficava esticado do topo até embaixo mesmo vazio.
-        val scrollContent = FrameLayout(ctx).apply {
-            layoutParams = FrameLayout.LayoutParams(
+
+        fun attachScrollableTop() {
+            val scrollWrapper = ScrollView(ctx).apply {
+                layoutParams = FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.MATCH_PARENT
+                )
+                setPadding(wPad, hPad, wPad, hPad)
+                clipToPadding = false
+                setOnClickListener { /* consome o toque para não fechar */ }
+            }
+            root.layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT
             )
+            scrollWrapper.addView(root)
+            frame.addView(scrollWrapper)
         }
-        val rootLayoutParams = FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT,
-            FrameLayout.LayoutParams.WRAP_CONTENT
-        ).also { it.gravity = Gravity.CENTER }
-        root.layoutParams = rootLayoutParams
-        // Fica invisível até sabermos (após carregar os dados) se o card deve
-        // abrir centralizado ou no topo — evita tanto o "pulo" de posição
-        // quanto a sensação de lentidão, já que o dialog.show() abaixo roda na
-        // hora, sem esperar a rede; só o conteúdo aparece depois, já no lugar certo.
-        root.visibility = View.INVISIBLE
-        scrollContent.addView(root)
-        scrollWrapper.addView(scrollContent)
-        frame.addView(scrollWrapper)
 
         dialog.setContentView(frame)
         dialog.window?.apply {
@@ -1429,9 +1430,7 @@ class ProfileFragment : Fragment() {
                     if (goal.type == "lucro") addLucroRow(goal) else addGastoRow(goal)
                 }
                 // Sem nada salvo, centraliza o card na tela; com itens, mantém no topo (rolável).
-                rootLayoutParams.gravity = if (goalConfig.items.isEmpty()) Gravity.CENTER else Gravity.TOP
-                root.layoutParams = rootLayoutParams
-                root.visibility = View.VISIBLE
+                if (goalConfig.items.isEmpty()) attachCentered() else attachScrollableTop()
             }
         }
 
