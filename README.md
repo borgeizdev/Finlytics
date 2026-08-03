@@ -12,7 +12,6 @@ Registre receitas e despesas, acompanhe metas e visualize relatórios detalhados
 [![Android](https://img.shields.io/badge/Android-3DDC84?style=flat&logo=android&logoColor=white)](https://developer.android.com)
 [![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=flat&logo=firebase&logoColor=black)](https://firebase.google.com)
 [![Min SDK](https://img.shields.io/badge/Min%20SDK-24-blue)](#)
-[![License](https://img.shields.io/badge/status-TCC-informational)](#)
 
 </div>
 
