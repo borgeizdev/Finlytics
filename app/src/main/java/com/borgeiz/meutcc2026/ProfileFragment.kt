@@ -515,11 +515,29 @@ class ProfileFragment : Fragment() {
         val rootLayoutParams = FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,
             FrameLayout.LayoutParams.WRAP_CONTENT
-        ).also { it.gravity = Gravity.TOP }
+        ).also { it.gravity = Gravity.CENTER }
         root.layoutParams = rootLayoutParams
+        // Fica invisível até sabermos (após carregar os dados) se o card deve
+        // abrir centralizado ou no topo — evita tanto o "pulo" de posição
+        // quanto a sensação de lentidão, já que o dialog.show() abaixo roda na
+        // hora, sem esperar a rede; só o conteúdo aparece depois, já no lugar certo.
+        root.visibility = View.INVISIBLE
         scrollContent.addView(root)
         scrollWrapper.addView(scrollContent)
         frame.addView(scrollWrapper)
+
+        dialog.setContentView(frame)
+        dialog.window?.apply {
+            setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+            setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+            setLayout(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT
+            )
+            addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            setDimAmount(0.5f)
+        }
+        dialog.show()
 
         val tvTitle = TextView(ctx).apply {
             text = typeLabel
@@ -633,6 +651,9 @@ class ProfileFragment : Fragment() {
                     .also { it.marginEnd = dpToPx(8) }
                 setAdapter(categoryAdapter())
                 setOnClickListener { showDropDown() }
+                // No primeiro toque o campo só ganha foco (o clique em si não abre o
+                // menu); sem isto o usuário precisa tocar duas vezes na primeira vez.
+                setOnFocusChangeListener { v, hasFocus -> if (hasFocus) (v as AutoCompleteTextView).showDropDown() }
             }
             val etAmount = EditText(ctx).apply {
                 hint = "Valor (R$)"
@@ -762,12 +783,9 @@ class ProfileFragment : Fragment() {
             container.removeAllViews()
             typeItems.forEach { addRow(it) }
             // Sem nada salvo, centraliza o card na tela; com itens, mantém no topo (rolável).
-            // A gravidade só é decidida aqui, então o dialog só aparece (dialog.show(),
-            // mais abaixo) depois de já sabermos onde ele deve ficar — evita o "pulo"
-            // de aparecer no topo e só depois saltar pro meio da tela.
             rootLayoutParams.gravity = if (typeItems.isEmpty()) Gravity.CENTER else Gravity.TOP
             root.layoutParams = rootLayoutParams
-            dialog.show()
+            root.visibility = View.VISIBLE
         }
 
         btnAddEntry.setOnClickListener { addRow() }
@@ -790,18 +808,6 @@ class ProfileFragment : Fragment() {
                 .addOnFailureListener {
                     Toast.makeText(ctx, "Erro: ${it.message}", Toast.LENGTH_LONG).show()
                 }
-        }
-
-        dialog.setContentView(frame)
-        dialog.window?.apply {
-            setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
-            setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
-            setLayout(
-                WindowManager.LayoutParams.MATCH_PARENT,
-                WindowManager.LayoutParams.MATCH_PARENT
-            )
-            addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-            setDimAmount(0.5f)
         }
     }
 
@@ -846,10 +852,28 @@ class ProfileFragment : Fragment() {
         val rootLayoutParams = FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,
             FrameLayout.LayoutParams.WRAP_CONTENT
-        ).also { it.gravity = Gravity.TOP }
+        ).also { it.gravity = Gravity.CENTER }
         root.layoutParams = rootLayoutParams
+        // Fica invisível até sabermos (após carregar os dados) se o card deve
+        // abrir centralizado ou no topo — evita tanto o "pulo" de posição
+        // quanto a sensação de lentidão, já que o dialog.show() abaixo roda na
+        // hora, sem esperar a rede; só o conteúdo aparece depois, já no lugar certo.
+        root.visibility = View.INVISIBLE
         scrollWrapper.addView(root)
         frame.addView(scrollWrapper)
+
+        dialog.setContentView(frame)
+        dialog.window?.apply {
+            setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+            setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+            setLayout(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT
+            )
+            addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            setDimAmount(0.5f)
+        }
+        dialog.show()
 
         val tvTitle = TextView(ctx).apply {
             text = "Categorias"
@@ -1042,13 +1066,10 @@ class ProfileFragment : Fragment() {
             config.income.forEach { addRow("receita", it) }
             config.expense.forEach { addRow("despesa", it) }
             // Sem nada salvo, centraliza o card na tela; com itens, mantém no topo (rolável).
-            // A gravidade só é decidida aqui, então o dialog só aparece (dialog.show(),
-            // mais abaixo) depois de já sabermos onde ele deve ficar — evita o "pulo"
-            // de aparecer no topo e só depois saltar pro meio da tela.
             val isEmpty = config.income.isEmpty() && config.expense.isEmpty()
             rootLayoutParams.gravity = if (isEmpty) Gravity.CENTER else Gravity.TOP
             root.layoutParams = rootLayoutParams
-            dialog.show()
+            root.visibility = View.VISIBLE
         }
 
         btnAddEntry.setOnClickListener { addRow(currentTab) }
@@ -1063,18 +1084,6 @@ class ProfileFragment : Fragment() {
                 .addOnFailureListener {
                     Toast.makeText(ctx, "Erro: ${it.message}", Toast.LENGTH_LONG).show()
                 }
-        }
-
-        dialog.setContentView(frame)
-        dialog.window?.apply {
-            setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
-            setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
-            setLayout(
-                WindowManager.LayoutParams.MATCH_PARENT,
-                WindowManager.LayoutParams.MATCH_PARENT
-            )
-            addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-            setDimAmount(0.5f)
         }
     }
 
@@ -1095,6 +1104,53 @@ class ProfileFragment : Fragment() {
                 cornerRadius = dpToPx(20).toFloat()
             }
         }
+
+        // Frame full-screen transparente — toque fora fecha o dialog. Rola porque a
+        // lista de metas pode ser mais longa que a tela.
+        val frame = FrameLayout(ctx).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+            setOnClickListener { dialog.dismiss() }
+        }
+        val scrollWrapper = ScrollView(ctx).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+            val h = dpToPx(24)
+            val w = dpToPx(20)
+            setPadding(w, h, w, h)
+            clipToPadding = false
+            isFillViewport = true
+            setOnClickListener { /* consome o toque para não fechar */ }
+        }
+        val rootLayoutParams = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.WRAP_CONTENT
+        ).also { it.gravity = Gravity.CENTER }
+        root.layoutParams = rootLayoutParams
+        // Fica invisível até sabermos (após carregar os dados) se o card deve
+        // abrir centralizado ou no topo — evita tanto o "pulo" de posição
+        // quanto a sensação de lentidão, já que o dialog.show() abaixo roda na
+        // hora, sem esperar a rede; só o conteúdo aparece depois, já no lugar certo.
+        root.visibility = View.INVISIBLE
+        scrollWrapper.addView(root)
+        frame.addView(scrollWrapper)
+
+        dialog.setContentView(frame)
+        dialog.window?.apply {
+            setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+            setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+            setLayout(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT
+            )
+            addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            setDimAmount(0.5f)
+        }
+        dialog.show()
 
         val tvTitle = TextView(ctx).apply {
             text = "Metas"
@@ -1341,13 +1397,19 @@ class ProfileFragment : Fragment() {
         root.addView(btnRow)
 
         categoryRepo.loadConfig { catConfig ->
+            if (!isAdded) return@loadConfig
             expenseCategories = catConfig.expense
             goalRepo.loadConfig { goalConfig ->
+                if (!isAdded) return@loadConfig
                 containerGasto.removeAllViews()
                 containerLucro.removeAllViews()
                 goalConfig.items.forEach { goal ->
                     if (goal.type == "lucro") addLucroRow(goal) else addGastoRow(goal)
                 }
+                // Sem nada salvo, centraliza o card na tela; com itens, mantém no topo (rolável).
+                rootLayoutParams.gravity = if (goalConfig.items.isEmpty()) Gravity.CENTER else Gravity.TOP
+                root.layoutParams = rootLayoutParams
+                root.visibility = View.VISIBLE
             }
         }
 
@@ -1364,46 +1426,6 @@ class ProfileFragment : Fragment() {
                     Toast.makeText(ctx, "Erro: ${it.message}", Toast.LENGTH_LONG).show()
                 }
         }
-
-        // Frame full-screen transparente — toque fora fecha o dialog. Rola porque a
-        // lista de metas pode ser mais longa que a tela.
-        val frame = FrameLayout(ctx).apply {
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            )
-            setOnClickListener { dialog.dismiss() }
-        }
-        val scrollWrapper = ScrollView(ctx).apply {
-            layoutParams = FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT
-            )
-            val h = dpToPx(24)
-            val w = dpToPx(20)
-            setPadding(w, h, w, h)
-            clipToPadding = false
-            setOnClickListener { /* consome o toque para não fechar */ }
-        }
-        root.layoutParams = FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT,
-            FrameLayout.LayoutParams.WRAP_CONTENT
-        )
-        scrollWrapper.addView(root)
-        frame.addView(scrollWrapper)
-
-        dialog.setContentView(frame)
-        dialog.window?.apply {
-            setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
-            setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
-            setLayout(
-                WindowManager.LayoutParams.MATCH_PARENT,
-                WindowManager.LayoutParams.MATCH_PARENT
-            )
-            addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-            setDimAmount(0.5f)
-        }
-        dialog.show()
     }
 
     private fun dpToPx(dp: Int): Int = (dp * resources.displayMetrics.density).toInt()
