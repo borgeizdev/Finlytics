@@ -849,6 +849,16 @@ class ProfileFragment : Fragment() {
             isFillViewport = true
             setOnClickListener { /* consome o toque para não fechar */ }
         }
+        // isFillViewport estica o filho direto do ScrollView para ocupar a tela
+        // toda quando o conteúdo é menor que ela. Sem esse wrapper transparente
+        // no meio, era o próprio "root" (o card com fundo arredondado) que virava
+        // o filho direto e ficava esticado do topo até embaixo mesmo vazio.
+        val scrollContent = FrameLayout(ctx).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
         val rootLayoutParams = FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,
             FrameLayout.LayoutParams.WRAP_CONTENT
@@ -859,7 +869,8 @@ class ProfileFragment : Fragment() {
         // quanto a sensação de lentidão, já que o dialog.show() abaixo roda na
         // hora, sem esperar a rede; só o conteúdo aparece depois, já no lugar certo.
         root.visibility = View.INVISIBLE
-        scrollWrapper.addView(root)
+        scrollContent.addView(root)
+        scrollWrapper.addView(scrollContent)
         frame.addView(scrollWrapper)
 
         dialog.setContentView(frame)
@@ -1126,6 +1137,16 @@ class ProfileFragment : Fragment() {
             isFillViewport = true
             setOnClickListener { /* consome o toque para não fechar */ }
         }
+        // isFillViewport estica o filho direto do ScrollView para ocupar a tela
+        // toda quando o conteúdo é menor que ela. Sem esse wrapper transparente
+        // no meio, era o próprio "root" (o card com fundo arredondado) que virava
+        // o filho direto e ficava esticado do topo até embaixo mesmo vazio.
+        val scrollContent = FrameLayout(ctx).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
         val rootLayoutParams = FrameLayout.LayoutParams(
             FrameLayout.LayoutParams.MATCH_PARENT,
             FrameLayout.LayoutParams.WRAP_CONTENT
@@ -1136,7 +1157,8 @@ class ProfileFragment : Fragment() {
         // quanto a sensação de lentidão, já que o dialog.show() abaixo roda na
         // hora, sem esperar a rede; só o conteúdo aparece depois, já no lugar certo.
         root.visibility = View.INVISIBLE
-        scrollWrapper.addView(root)
+        scrollContent.addView(root)
+        scrollWrapper.addView(scrollContent)
         frame.addView(scrollWrapper)
 
         dialog.setContentView(frame)
