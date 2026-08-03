@@ -1,5 +1,6 @@
-package com.borgeiz.meutcc2026
+package com.borgeiz.meutcc2026.transactions
 
+import com.borgeiz.meutcc2026.R
 import android.app.AlertDialog
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle

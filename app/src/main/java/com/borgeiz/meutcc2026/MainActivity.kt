@@ -8,7 +8,12 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import com.borgeiz.meutcc2026.dashboard.DashboardFragment
 import com.borgeiz.meutcc2026.data.RecurringRepository
+import com.borgeiz.meutcc2026.profile.ProfileFragment
+import com.borgeiz.meutcc2026.reports.ReportsFragment
+import com.borgeiz.meutcc2026.transactions.AddTransactionFragment
+import com.borgeiz.meutcc2026.transactions.TransactionsFragment
 import com.google.firebase.auth.FirebaseAuth
 
 class MainActivity : AppCompatActivity() {

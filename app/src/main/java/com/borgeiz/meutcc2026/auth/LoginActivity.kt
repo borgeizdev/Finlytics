@@ -1,11 +1,13 @@
-package com.borgeiz.meutcc2026
+package com.borgeiz.meutcc2026.auth
 
+import com.borgeiz.meutcc2026.R
 import android.content.Intent
 import android.os.Bundle
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.borgeiz.meutcc2026.MainActivity
 import com.google.firebase.auth.FirebaseAuth
 
 class LoginActivity : AppCompatActivity() {

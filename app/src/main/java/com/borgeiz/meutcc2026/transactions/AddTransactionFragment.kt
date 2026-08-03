@@ -1,5 +1,6 @@
-package com.borgeiz.meutcc2026
+package com.borgeiz.meutcc2026.transactions
 
+import com.borgeiz.meutcc2026.R
 import android.app.DatePickerDialog
 import android.content.res.ColorStateList
 import android.os.Bundle

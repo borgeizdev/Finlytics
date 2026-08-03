@@ -88,12 +88,18 @@ Registre receitas e despesas, acompanhe metas e visualize relatórios detalhados
 
 ```
 app/src/main/java/com/borgeiz/meutcc2026/
-├── adapter/        # Adapters de RecyclerView
-├── data/           # Repositórios de acesso ao Firebase
-├── model/          # Modelos de dados (Transaction, Goal, RecurringItem...)
-├── util/           # Funções utilitárias (gráficos, agregações, parsing)
-├── *Activity.kt    # Telas de autenticação e edição
-└── *Fragment.kt    # Telas principais (Dashboard, Transações, Relatórios, Perfil)
+├── App.kt              # Application: tema salvo (claro/escuro/sistema)
+├── MainActivity.kt     # Host da navegação principal (bottom nav)
+├── SplashActivity.kt   # Tela de abertura
+├── auth/               # Login, cadastro e recuperação de senha
+├── dashboard/          # Tela inicial (saldo, busca, atalhos)
+├── transactions/       # Lançamentos: listagem, criação e edição
+├── reports/            # Relatórios e análise por forma de pagamento
+├── profile/            # Perfil e configurações (categorias, recorrências, metas)
+├── adapter/            # Adapters de RecyclerView
+├── data/               # Repositórios de acesso ao Firebase
+├── model/              # Modelos de dados (Transaction, Goal, RecurringItem...)
+└── util/               # Funções utilitárias (gráficos, agregações, parsing)
 ```
 
 ---

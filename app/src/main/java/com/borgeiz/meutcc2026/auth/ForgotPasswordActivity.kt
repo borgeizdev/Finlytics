@@ -1,5 +1,6 @@
-package com.borgeiz.meutcc2026
+package com.borgeiz.meutcc2026.auth
 
+import com.borgeiz.meutcc2026.R
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText

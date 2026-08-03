@@ -10,10 +10,10 @@
         android:label="@string/app_name"
         android:theme="@style/Theme.Meutcc2026">
 
-        <activity android:name=".EditTransactionActivity" />
-        <activity android:name=".ForgotPasswordActivity" />
-        <activity android:name=".RegisterActivity" />
-        <activity android:name=".LoginActivity" />
+        <activity android:name=".transactions.EditTransactionActivity" />
+        <activity android:name=".auth.ForgotPasswordActivity" />
+        <activity android:name=".auth.RegisterActivity" />
+        <activity android:name=".auth.LoginActivity" />
         <activity android:name=".MainActivity" />
 
         <activity

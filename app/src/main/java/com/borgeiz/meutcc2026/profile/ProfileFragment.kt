@@ -1,5 +1,6 @@
-package com.borgeiz.meutcc2026
+package com.borgeiz.meutcc2026.profile
 
+import com.borgeiz.meutcc2026.R
 import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
@@ -10,6 +11,7 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.*
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.fragment.app.Fragment
+import com.borgeiz.meutcc2026.auth.LoginActivity
 import com.borgeiz.meutcc2026.data.CategoryRepository
 import com.borgeiz.meutcc2026.data.GoalRepository
 import com.borgeiz.meutcc2026.data.RecurringRepository

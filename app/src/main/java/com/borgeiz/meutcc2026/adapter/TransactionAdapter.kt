@@ -7,9 +7,9 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
-import com.borgeiz.meutcc2026.EditTransactionActivity
 import com.borgeiz.meutcc2026.R
 import com.borgeiz.meutcc2026.model.Transaction
+import com.borgeiz.meutcc2026.transactions.EditTransactionActivity
 
 class TransactionAdapter(
     private val list: List<Transaction>

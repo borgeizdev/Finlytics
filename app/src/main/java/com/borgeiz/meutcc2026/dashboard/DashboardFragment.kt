@@ -1,5 +1,6 @@
-package com.borgeiz.meutcc2026
+package com.borgeiz.meutcc2026.dashboard
 
+import com.borgeiz.meutcc2026.R
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -12,11 +13,13 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.borgeiz.meutcc2026.MainActivity
 import com.borgeiz.meutcc2026.adapter.TransactionAdapter
 import com.borgeiz.meutcc2026.data.TransactionsRepository
 import com.borgeiz.meutcc2026.data.expenseTotal
 import com.borgeiz.meutcc2026.data.incomeTotal
 import com.borgeiz.meutcc2026.model.Transaction
+import com.borgeiz.meutcc2026.reports.PaymentMethodReportFragment
 import com.google.android.material.button.MaterialButton
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
