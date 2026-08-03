@@ -11,6 +11,7 @@ import android.widget.*
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.fragment.app.Fragment
 import com.borgeiz.meutcc2026.data.CategoryRepository
+import com.borgeiz.meutcc2026.data.DebugDataSeeder
 import com.borgeiz.meutcc2026.data.GoalRepository
 import com.borgeiz.meutcc2026.data.RecurringRepository
 import com.borgeiz.meutcc2026.model.CategoryConfig
@@ -107,7 +108,10 @@ class ProfileFragment : Fragment() {
             MenuItem(R.drawable.ic_palette,   R.color.primary, R.color.settings_badge_display, "Configurações de exibição", "Tema claro, escuro ou sistema"),
             MenuItem(R.drawable.ic_wallet,    R.color.income,  R.color.settings_badge_salary,  "Recorrências",               "Salário, assinaturas e contas fixas"),
             MenuItem(R.drawable.ic_tag,       R.color.primary, R.color.settings_badge_category, "Categorias",                "Categorias de receita e despesa"),
-            MenuItem(R.drawable.ic_bar_chart, R.color.primary, R.color.settings_badge_goal,     "Metas",                     "Limites de gasto mensais")
+            MenuItem(R.drawable.ic_bar_chart, R.color.primary, R.color.settings_badge_goal,     "Metas",                     "Limites de gasto mensais"),
+            // Item temporário só de debug: apaga os lançamentos reais e gera alguns
+            // meses de dados fictícios para demonstração. Remover depois do uso.
+            MenuItem(R.drawable.ic_list,      R.color.expense, R.color.expense_bg,              "Gerar dados de teste",      "Apaga os dados atuais e cria fictícios (debug)")
         )
 
         val dialog = AlertDialog.Builder(ctx)
@@ -133,6 +137,7 @@ class ProfileFragment : Fragment() {
                         2 -> showRecurringItemsDialog(uid)
                         3 -> showCategoriesDialog(uid)
                         4 -> showGoalsDialog(uid)
+                        5 -> showSeedDebugDataConfirm(uid)
                     }
                 }
             }
@@ -205,6 +210,45 @@ class ProfileFragment : Fragment() {
                 cornerRadius = dpToPx(20).toFloat()
             }
         )
+    }
+
+    // Item temporário só de debug (ver showSettingsMenu) — apaga os lançamentos,
+    // categorias, recorrências e metas reais da conta e gera alguns meses de
+    // dados fictícios pra demonstração. Remover este método e o item do menu
+    // depois de usar.
+    private fun showSeedDebugDataConfirm(uid: String) {
+        val ctx = requireContext()
+        AlertDialog.Builder(ctx)
+            .setTitle("Gerar dados de teste")
+            .setMessage(
+                "Isso vai APAGAR permanentemente todos os seus lançamentos, categorias, " +
+                    "recorrências e metas atuais, e colocar no lugar alguns meses de dados " +
+                    "fictícios (só para demonstração). Essa ação não pode ser desfeita.\n\n" +
+                    "Tem certeza?"
+            )
+            .setPositiveButton("Apagar e gerar") { _, _ ->
+                Toast.makeText(ctx, "Gerando dados de teste...", Toast.LENGTH_SHORT).show()
+                DebugDataSeeder.resetAndSeed(uid) { success ->
+                    if (!isAdded) return@resetAndSeed
+                    Toast.makeText(
+                        requireContext(),
+                        if (success) "Dados de teste gerados!" else "Erro ao gerar dados de teste.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
+            .also { d ->
+                d.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(ctx.getColor(R.color.expense))
+                d.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(primaryBlue)
+                d.window?.setBackgroundDrawable(
+                    android.graphics.drawable.GradientDrawable().apply {
+                        setColor(ctx.getColor(R.color.bg_card))
+                        cornerRadius = dpToPx(20).toFloat()
+                    }
+                )
+            }
     }
 
     private fun showEditProfileDialog() {
