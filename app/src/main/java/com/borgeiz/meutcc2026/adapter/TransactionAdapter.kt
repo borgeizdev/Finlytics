@@ -10,6 +10,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.borgeiz.meutcc2026.R
 import com.borgeiz.meutcc2026.model.Transaction
 import com.borgeiz.meutcc2026.transactions.EditTransactionActivity
+import com.borgeiz.meutcc2026.util.formatMoneyPtBr
 
 class TransactionAdapter(
     private val list: List<Transaction>
@@ -37,10 +38,10 @@ class TransactionAdapter(
         holder.tvInfo.text  = "${item.category}  ·  ${item.date}"
 
         if (item.type == "receita") {
-            holder.tvAmount.text = "+R$ %.2f".format(item.amount)
+            holder.tvAmount.text = "+" + formatMoneyPtBr(item.amount)
             holder.tvAmount.setTextColor(ContextCompat.getColor(ctx, R.color.income))
         } else {
-            holder.tvAmount.text = "-R$ %.2f".format(item.amount)
+            holder.tvAmount.text = "-" + formatMoneyPtBr(item.amount)
             holder.tvAmount.setTextColor(ContextCompat.getColor(ctx, R.color.expense))
         }
 

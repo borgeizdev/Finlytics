@@ -25,6 +25,7 @@ import com.borgeiz.meutcc2026.model.Transaction
 import com.borgeiz.meutcc2026.util.buildBreakdownRows
 import com.borgeiz.meutcc2026.util.categoryTotalsForMonth
 import com.borgeiz.meutcc2026.util.chartPaletteHex
+import com.borgeiz.meutcc2026.util.formatMoneyPtBr
 import com.borgeiz.meutcc2026.util.isDarkMode
 import com.borgeiz.meutcc2026.util.setupBreakdownPieChart
 import com.github.mikephil.charting.charts.BarChart
@@ -198,21 +199,21 @@ class ReportsFragment : Fragment() {
             val prevTotal = prevExpenses.sumOf { it.amount }
 
             // Média diária e maiores lançamentos
-            tvAvgPerDay.text = "R$ ${"%.2f".format(if (today > 0) curTotal / today else 0.0)}"
+            tvAvgPerDay.text = formatMoneyPtBr(if (today > 0) curTotal / today else 0.0)
 
             val topExpense = curExpenses.maxByOrNull { it.amount }
-            tvTopExpenseValue.text = topExpense?.let { "R$ ${"%.2f".format(it.amount)}" } ?: "—"
+            tvTopExpenseValue.text = topExpense?.let { formatMoneyPtBr(it.amount) } ?: "—"
             tvTopExpenseTitle.text = topExpense?.title?.ifBlank { "Sem título" } ?: "Nenhuma despesa"
 
             val topIncome = curIncomes.maxByOrNull { it.amount }
-            tvTopIncomeValue.text = topIncome?.let { "R$ ${"%.2f".format(it.amount)}" } ?: "—"
+            tvTopIncomeValue.text = topIncome?.let { formatMoneyPtBr(it.amount) } ?: "—"
             tvTopIncomeTitle.text = topIncome?.title?.ifBlank { "Sem título" } ?: "Nenhuma receita"
 
             // Hero: variação total do mês
             val prevMonthName = monthLabelsFull.getOrElse(prevMonth) { "" }
             if (prevTotal <= 0.0) {
                 tvHeroBadge.visibility = View.GONE
-                tvHeroValue.text = "R$ ${"%.2f".format(curTotal)}"
+                tvHeroValue.text = formatMoneyPtBr(curTotal)
                 tvHeroDetail.text = "Sem dados de $prevMonthName para comparar."
             } else {
                 val deltaPct = (curTotal - prevTotal) / prevTotal * 100.0
@@ -229,12 +230,12 @@ class ReportsFragment : Fragment() {
                     cornerRadius = 999f
                     setColor(ContextCompat.getColor(ctx, badgeBgRes))
                 }
-                tvHeroValue.text = "R$ ${"%.2f".format(curTotal)}"
+                tvHeroValue.text = formatMoneyPtBr(curTotal)
 
                 val diff = kotlin.math.abs(curTotal - prevTotal)
                 val comparativo = if (isIncrease) "a mais" else if (isDecrease) "a menos" else "praticamente igual a"
                 tvHeroDetail.text =
-                    "Você gastou R$ ${"%.2f".format(diff)} $comparativo que em $prevMonthName (R$ ${"%.2f".format(prevTotal)})"
+                    "Você gastou ${formatMoneyPtBr(diff)} $comparativo que em $prevMonthName (${formatMoneyPtBr(prevTotal)})"
             }
 
             // Variação por categoria
@@ -280,9 +281,9 @@ class ReportsFragment : Fragment() {
             val totalIncome  = allTransactions.incomeTotal()
             val totalExpense = allTransactions.expenseTotal()
             val balance = totalIncome - totalExpense + adjustment
-            tvIncome.text  = "R$ %.2f".format(totalIncome)
-            tvExpense.text = "R$ %.2f".format(totalExpense)
-            tvBalance.text = "R$ %.2f".format(balance)
+            tvIncome.text  = formatMoneyPtBr(totalIncome)
+            tvExpense.text = formatMoneyPtBr(totalExpense)
+            tvBalance.text = formatMoneyPtBr(balance)
 
             setupBarChart(barChart, allTransactions)
             refreshCategoryChart(spCatMonth.selectedItemPosition)
@@ -381,7 +382,7 @@ class ReportsFragment : Fragment() {
             }
 
             val tvValues = TextView(ctx).apply {
-                text = "R$ ${"%.2f".format(d.previous)} → R$ ${"%.2f".format(d.current)}"
+                text = "${formatMoneyPtBr(d.previous)} → ${formatMoneyPtBr(d.current)}"
                 textSize = 11f
                 setTextColor(ContextCompat.getColor(ctx, R.color.text_hint))
             }
@@ -500,9 +501,9 @@ class ReportsFragment : Fragment() {
 
             val tvValues = TextView(ctx).apply {
                 text = if (isLucro) {
-                    "Lucro atual: R$ ${"%.2f".format(current)}  ·  meta: R$ ${"%.2f".format(goal.targetAmount)}"
+                    "Lucro atual: ${formatMoneyPtBr(current)}  ·  meta: ${formatMoneyPtBr(goal.targetAmount)}"
                 } else {
-                    "R$ ${"%.2f".format(current)} de R$ ${"%.2f".format(goal.targetAmount)}"
+                    "${formatMoneyPtBr(current)} de ${formatMoneyPtBr(goal.targetAmount)}"
                 }
                 textSize = 11f
                 setTextColor(ContextCompat.getColor(ctx, R.color.text_hint))

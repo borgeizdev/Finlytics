@@ -21,6 +21,9 @@ import com.borgeiz.meutcc2026.model.GoalConfig
 import com.borgeiz.meutcc2026.model.RecurringConfig
 import com.borgeiz.meutcc2026.model.RecurringItem
 import com.borgeiz.meutcc2026.util.parseAmountPtBr
+import com.borgeiz.meutcc2026.util.formatAmountInputPtBr
+import com.borgeiz.meutcc2026.util.formatMoneyPtBr
+import com.borgeiz.meutcc2026.util.setupMoneyInputPtBr
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
@@ -669,8 +672,8 @@ class ProfileFragment : Fragment() {
             }
             val etAmount = EditText(ctx).apply {
                 hint = "Valor (R$)"
-                setText(if ((item?.amount ?: 0.0) > 0) "%.2f".format(item!!.amount) else "")
-                inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+                setupMoneyInputPtBr()
+                setText(if ((item?.amount ?: 0.0) > 0) formatAmountInputPtBr(item!!.amount) else "")
                 isSingleLine = true
                 setHintTextColor(ctx.getColor(R.color.text_hint))
                 setTextColor(ctx.getColor(R.color.text_heading))
@@ -808,7 +811,7 @@ class ProfileFragment : Fragment() {
                     if (config.items.isNotEmpty()) recurringRepo.checkAndPostIfNeeded(config) { tx ->
                         if (isAdded) Toast.makeText(
                             ctx,
-                            "R$ ${"%.2f".format(tx.amount)} lançado para ${tx.date}",
+                            "${formatMoneyPtBr(tx.amount)} lançado para ${tx.date}",
                             Toast.LENGTH_SHORT
                         ).show()
                     }
@@ -1321,8 +1324,8 @@ class ProfileFragment : Fragment() {
 
             val etAmount = EditText(ctx).apply {
                 hint = "Valor alvo (R$)"
-                setText(if ((goal?.targetAmount ?: 0.0) > 0) "%.2f".format(goal!!.targetAmount) else "")
-                inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+                setupMoneyInputPtBr()
+                setText(if ((goal?.targetAmount ?: 0.0) > 0) formatAmountInputPtBr(goal!!.targetAmount) else "")
                 isSingleLine = true
                 setHintTextColor(ctx.getColor(R.color.text_hint))
                 setTextColor(ctx.getColor(R.color.text_heading))
@@ -1360,8 +1363,8 @@ class ProfileFragment : Fragment() {
 
             val etAmount = EditText(ctx).apply {
                 hint = "Lucro alvo no mês (R$)"
-                setText(if ((goal?.targetAmount ?: 0.0) > 0) "%.2f".format(goal!!.targetAmount) else "")
-                inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+                setupMoneyInputPtBr()
+                setText(if ((goal?.targetAmount ?: 0.0) > 0) formatAmountInputPtBr(goal!!.targetAmount) else "")
                 isSingleLine = true
                 setHintTextColor(ctx.getColor(R.color.text_hint))
                 setTextColor(ctx.getColor(R.color.text_heading))

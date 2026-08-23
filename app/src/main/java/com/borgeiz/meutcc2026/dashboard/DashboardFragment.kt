@@ -20,6 +20,7 @@ import com.borgeiz.meutcc2026.data.expenseTotal
 import com.borgeiz.meutcc2026.data.incomeTotal
 import com.borgeiz.meutcc2026.model.Transaction
 import com.borgeiz.meutcc2026.reports.PaymentMethodReportFragment
+import com.borgeiz.meutcc2026.util.formatMoneyPtBr
 import com.google.android.material.button.MaterialButton
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
@@ -158,13 +159,13 @@ class DashboardFragment : Fragment() {
             val income  = transactions.incomeTotal()
             val expense = transactions.expenseTotal()
             val balance = income - expense
-            tvBalance.text = "R$ %.2f".format(balance)
+            tvBalance.text = formatMoneyPtBr(balance)
             tvBalance.setTextColor(
                 if (balance >= 0) android.graphics.Color.WHITE
                 else android.graphics.Color.parseColor("#FCA5A5")
             )
-            tvIncome.text  = "R$ %.2f".format(income)
-            tvExpense.text = "R$ %.2f".format(expense)
+            tvIncome.text  = formatMoneyPtBr(income)
+            tvExpense.text = formatMoneyPtBr(expense)
             updateTrends()
 
             val query = etSearch.text?.toString()?.trim() ?: ""

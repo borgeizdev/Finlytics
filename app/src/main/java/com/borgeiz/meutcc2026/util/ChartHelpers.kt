@@ -48,7 +48,7 @@ fun buildBreakdownRows(
     sorted.forEachIndexed { idx, (label, value) ->
         val pct    = if (total > 0) (value / total * 100.0) else 0.0
         val color  = Color.parseColor(chartPaletteHex[idx % chartPaletteHex.size])
-        val pctStr = if (pct < 1.0 && pct > 0.0) "${"%.1f".format(pct)}%" else "${pct.toInt()}%"
+        val pctStr = if (pct < 1.0 && pct > 0.0) "${formatPercentPtBr(pct)}%" else "${pct.toInt()}%"
         val isLast = idx == sorted.size - 1
 
         val row = LinearLayout(ctx).apply {
@@ -93,7 +93,7 @@ fun buildBreakdownRows(
         }
 
         val tvAmt = TextView(ctx).apply {
-            text = "R$ ${"%.2f".format(value)}"
+            text = formatMoneyPtBr(value)
             textSize = 13f
             setTextColor(amtColor)
             layoutParams = LinearLayout.LayoutParams(
@@ -190,7 +190,7 @@ fun setupBreakdownPieChart(
         valueTextColor = Color.WHITE
         valueFormatter = object : com.github.mikephil.charting.formatter.ValueFormatter() {
             override fun getFormattedValue(value: Float): String {
-                return if (value < 1f && value > 0f) "${"%.1f".format(value)}%" else "${value.toInt()}%"
+                return if (value < 1f && value > 0f) "${formatPercentPtBr(value.toDouble())}%" else "${value.toInt()}%"
             }
         }
         sliceSpace = 2f
