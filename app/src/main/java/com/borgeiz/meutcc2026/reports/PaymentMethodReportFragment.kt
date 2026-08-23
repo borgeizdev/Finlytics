@@ -17,6 +17,7 @@ import androidx.fragment.app.Fragment
 import com.borgeiz.meutcc2026.data.TransactionsRepository
 import com.borgeiz.meutcc2026.model.Transaction
 import com.borgeiz.meutcc2026.util.buildBreakdownRows
+import com.borgeiz.meutcc2026.util.formatMoneyPtBr
 import com.borgeiz.meutcc2026.util.isDarkMode
 import com.borgeiz.meutcc2026.util.setupBreakdownPieChart
 import com.github.mikephil.charting.charts.PieChart
@@ -98,7 +99,7 @@ class PaymentMethodReportFragment : Fragment() {
                 totals[method] = (totals[method] ?: 0.0) + t.amount
             }
 
-            tvTotal.text = "R$ %.2f".format(total)
+            tvTotal.text = formatMoneyPtBr(total)
 
             if (totals.isEmpty()) {
                 pieChart.visibility = View.GONE

@@ -13,7 +13,9 @@ import com.google.android.material.textfield.TextInputEditText
 import com.borgeiz.meutcc2026.data.CategoryRepository
 import com.borgeiz.meutcc2026.model.PaymentMethods
 import com.borgeiz.meutcc2026.model.Transaction
+import com.borgeiz.meutcc2026.util.formatAmountInputPtBr
 import com.borgeiz.meutcc2026.util.parseAmountPtBr
+import com.borgeiz.meutcc2026.util.setupMoneyInputPtBr
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
 import java.util.Calendar
@@ -47,9 +49,11 @@ class EditTransactionActivity : AppCompatActivity() {
             spPaymentMethod.visibility = android.view.View.GONE
         }
 
+        etAmount.setupMoneyInputPtBr()
+
         etTitle.setText(intent.getStringExtra("title"))
         etAmount.setText(intent.getDoubleExtra("amount", 0.0).let {
-            if (it == 0.0) "" else "%.2f".format(it)
+            if (it == 0.0) "" else formatAmountInputPtBr(it)
         })
         etDate.setText(intent.getStringExtra("date"))
         etDescription.setText(intent.getStringExtra("description"))

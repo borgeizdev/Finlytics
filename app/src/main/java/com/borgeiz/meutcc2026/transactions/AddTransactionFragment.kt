@@ -18,6 +18,7 @@ import com.borgeiz.meutcc2026.model.CategoryConfig
 import com.borgeiz.meutcc2026.model.PaymentMethods
 import com.borgeiz.meutcc2026.model.Transaction
 import com.borgeiz.meutcc2026.util.parseAmountPtBr
+import com.borgeiz.meutcc2026.util.setupMoneyInputPtBr
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
 import java.util.Calendar
@@ -58,6 +59,8 @@ class AddTransactionFragment : Fragment() {
         val etDate        = view.findViewById<TextInputEditText>(R.id.etDate)
         val etDescription = view.findViewById<TextInputEditText>(R.id.etDescription)
         val btnSave       = view.findViewById<MaterialButton>(R.id.btnSaveTransaction)
+
+        etAmount.setupMoneyInputPtBr()
 
         setType("receita")
 
