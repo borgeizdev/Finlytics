@@ -1,5 +1,8 @@
 package com.borgeiz.meutcc2026.util
 
+import android.text.InputType
+import android.text.method.DigitsKeyListener
+import android.widget.EditText
 import java.util.Locale
 
 /** Locale usado em toda a formatação numérica do app. */
@@ -47,3 +50,13 @@ fun formatAmountInputPtBr(value: Double): String =
  */
 fun formatPercentPtBr(value: Double): String =
     String.format(LOCALE_PT_BR, "%.1f", value)
+
+/**
+ * Configura um [EditText] para entrada de valores monetários em pt-BR:
+ * teclado numérico decimal e apenas dígitos e vírgula são aceitos (o ponto
+ * é descartado, evitando ambiguidade com o separador de milhar).
+ */
+fun EditText.setupMoneyInputPtBr() {
+    inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+    keyListener = DigitsKeyListener.getInstance("0123456789,")
+}
