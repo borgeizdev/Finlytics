@@ -303,6 +303,10 @@ class ProfileFragment : Fragment() {
             }
     }
 
+    // Primeiro passo da configuração de recorrências: só pergunta "receita ou
+    // despesa" (o CRUD de verdade fica em showRecurringTypeDialog). Esse dialog e
+    // os de baixo (categorias, metas) são montados na mão em Kotlin — sem XML —
+    // por isso o tanto de LinearLayout/TextView criado programaticamente aqui.
     private fun showRecurringItemsDialog(uid: String) {
         val ctx = requireContext()
 
@@ -466,6 +470,13 @@ class ProfileFragment : Fragment() {
         dialog.show()
     }
 
+    // Tela de "Recorrências" de um tipo (receita ou despesa): lista, permite
+    // adicionar/remover linhas (salário, Netflix, aluguel...) e salvar. Cada linha
+    // guarda título, categoria, valor e dia do mês. Ao salvar, RecurringRepository
+    // grava tudo em users/{uid}/recurringConfig e, se deu certo, chama
+    // checkAndPostIfNeeded imediatamente — então se você acabou de cadastrar um item
+    // cujo dia já passou este mês, ele já lança a transação na hora, sem esperar o
+    // app reabrir.
     private fun showRecurringTypeDialog(uid: String, type: String) {
         val ctx = requireContext()
         val recurringRepo = RecurringRepository(uid)
@@ -804,6 +815,9 @@ class ProfileFragment : Fragment() {
         btnCancel.setOnClickListener { dialog.dismiss() }
         btnSave.setOnClickListener {
             val items  = collectEntries() ?: return@setOnClickListener
+            // otherTypeItems preserva os itens do OUTRO tipo (ex: editando despesas,
+            // não pode perder as receitas recorrentes já salvas) — essa tela edita só
+            // metade da lista por vez, mas o cadastro no banco é sempre a lista inteira.
             val config = RecurringConfig(items = otherTypeItems + items)
             recurringRepo.saveConfig(config)
                 .addOnSuccessListener {
@@ -823,6 +837,10 @@ class ProfileFragment : Fragment() {
         }
     }
 
+    // Tela de "Categorias": duas listas editáveis (receita/despesa) que alimentam
+    // os seletores de categoria usados em AddTransactionFragment, EditTransactionActivity
+    // e nas próprias Recorrências/Metas. Ao salvar, sobrescreve inteiro o
+    // CategoryConfig em users/{uid}/categories (CategoryRepository.saveConfig).
     private fun showCategoriesDialog(uid: String) {
         val ctx = requireContext()
         val categoryRepo = CategoryRepository(uid)
@@ -1041,6 +1059,9 @@ class ProfileFragment : Fragment() {
             return true
         }
 
+        // distinctBy { it.lowercase() } remove duplicatas ignorando maiúscula/
+        // minúscula — evita que "Alimentação" e "alimentação" virem duas categorias
+        // diferentes por acidente.
         fun collectCategories(): CategoryConfig? {
             val income = mutableListOf<String>()
             val expense = mutableListOf<String>()
@@ -1117,6 +1138,11 @@ class ProfileFragment : Fragment() {
         }
     }
 
+    // Tela de "Metas": duas abas — "Limite de gasto" (geral ou por categoria de
+    // despesa) e "Lucro mensal" (receita menos despesa). Cada linha vira um objeto
+    // Goal com um "type" ("gasto"/"lucro") que depois decide, em ReportsFragment,
+    // se progresso alto na barra é bom ou ruim. Salvar sobrescreve o GoalConfig
+    // inteiro em users/{uid}/goals.
     private fun showGoalsDialog(uid: String) {
         val ctx = requireContext()
         val goalRepo = GoalRepository(uid)
@@ -1400,6 +1426,10 @@ class ProfileFragment : Fragment() {
             return true
         }
 
+        // Diferente das recorrências (que separam "editando agora" de "preservar o
+        // resto" com otherTypeItems), aqui as duas abas convivem na mesma tela ao
+        // mesmo tempo: containerGasto e containerLucro são duas listas visuais
+        // independentes, e collectGoals percorre as duas e junta tudo numa lista só.
         fun collectGoals(): List<Goal>? {
             val result = mutableListOf<Goal>()
             if (!collectFrom(containerGasto, "gasto", result)) return null

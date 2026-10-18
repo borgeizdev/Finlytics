@@ -25,6 +25,7 @@ import com.borgeiz.meutcc2026.model.Transaction
 import com.borgeiz.meutcc2026.util.buildBreakdownRows
 import com.borgeiz.meutcc2026.util.categoryTotalsForMonth
 import com.borgeiz.meutcc2026.util.chartPaletteHex
+import com.borgeiz.meutcc2026.util.formatIntegerPtBr
 import com.borgeiz.meutcc2026.util.formatMoneyPtBr
 import com.borgeiz.meutcc2026.util.isDarkMode
 import com.borgeiz.meutcc2026.util.setupBreakdownPieChart
@@ -141,6 +142,11 @@ class ReportsFragment : Fragment() {
         var adjustment = 0.0
         var goals = listOf<Goal>()
 
+        // Gastos por categoria: filtra as despesas pelo mês escolhido no spinner
+        // (monthFilter == 0 significa "todos os meses"), soma manualmente por
+        // categoria num Map, e usa esse Map pra alimentar tanto o gráfico de pizza
+        // quanto a lista com barrinha de progresso logo abaixo dele (ambos vêm de
+        // ChartHelpers.kt, reaproveitados também pela análise por forma de pagamento).
         fun refreshCategoryChart(monthFilter: Int) {
             val expenses = allTransactions.filter { t ->
                 t.type == "despesa" && (monthFilter == 0 || run {
@@ -178,6 +184,14 @@ class ReportsFragment : Fragment() {
             return parts.size >= 2 && parts[0].toIntOrNull() == year && parts[1].toIntOrNull() == month
         }
 
+        // "Insights": bloco que calcula tudo que aparece na parte de análise dos
+        // Relatórios num só lugar — sempre comparando o mês atual (curXxx) com o
+        // mês anterior (prevXxx), calculados a partir de allTransactions em memória
+        // (nada disso é uma nova consulta ao Firebase). Dentro dela:
+        //   • média diária e maior receita/despesa do mês
+        //   • "hero": variação percentual do total de despesas vs. mês passado
+        //   • variação por categoria (delega para buildCategoryVariationRows)
+        //   • gasto por dia da semana (delega para setupWeekdayChart)
         fun refreshInsights() {
             if (!isAdded) return
             val ctx = requireContext()
@@ -241,10 +255,16 @@ class ReportsFragment : Fragment() {
             // Variação por categoria
             val curCat  = curExpenses.groupBy { it.category.ifBlank { "Outros" } }.mapValues { (_, v) -> v.sumOf { it.amount } }
             val prevCat = prevExpenses.groupBy { it.category.ifBlank { "Outros" } }.mapValues { (_, v) -> v.sumOf { it.amount } }
+            // Junta as categorias dos dois meses sem repetir (é um Set) — importante
+            // porque uma categoria pode existir num mês e não no outro.
             val allCats = curCat.keys + prevCat.keys
             val deltas = allCats.map { cat ->
                 val cur  = curCat[cat] ?: 0.0
                 val prev = prevCat[cat] ?: 0.0
+                // 3 casos: variação normal quando existia no mês passado; 100% fixo
+                // quando é uma categoria totalmente nova (não dá pra calcular
+                // "variação" de um valor que não existia); 0% quando não teve gasto
+                // em nenhum dos dois meses.
                 val pct = when {
                     prev > 0.0 -> (cur - prev) / prev * 100.0
                     cur > 0.0  -> 100.0
@@ -265,6 +285,11 @@ class ReportsFragment : Fragment() {
             }
         }
 
+        // Metas do mês: recalcula o gasto (por categoria e geral) e o lucro do mês
+        // atual a partir de allTransactions, e repassa pra buildGoalsProgress, que
+        // desenha uma barra de progresso por meta configurada em Perfil > Metas.
+        // Roda tanto quando as transações mudam quanto quando a config de metas
+        // muda (dois listeners diferentes, mesma função — ver onCreateView abaixo).
         fun refreshGoalsProgress() {
             if (!isAdded) return
             val cal = Calendar.getInstance()
@@ -325,6 +350,10 @@ class ReportsFragment : Fragment() {
         return view
     }
 
+    // Desenha a lista "variação por categoria" (bolinha colorida + nome + valores +
+    // seta de %). Os deltas já vêm prontos de refreshInsights: para cada categoria,
+    // pct é (atual - anterior) / anterior * 100 — ou 100% se a categoria não existia
+    // no mês passado — ordenados do maior aumento pro menor, limitado às 6 primeiras.
     private fun buildCategoryVariationRows(container: LinearLayout, deltas: List<CategoryDelta>) {
         val ctx = requireContext()
         val dp  = ctx.resources.displayMetrics.density
@@ -410,6 +439,12 @@ class ReportsFragment : Fragment() {
         }
     }
 
+    // Desenha uma barra de progresso por meta (Goal). "current" é o gasto do mês
+    // (por categoria, ou o total geral se a meta não tem categoria) para metas do
+    // tipo "gasto", ou o lucro do mês (receita - despesa) para metas do tipo "lucro".
+    // pct = current / targetAmount * 100. As cores da barra são intencionalmente
+    // opostas entre os dois tipos: numa meta de gasto, 100%+ é vermelho (estourou);
+    // numa meta de lucro, 100%+ é verde (bateu a meta).
     private fun buildGoalsProgress(
         container: LinearLayout,
         goals: List<Goal>,
@@ -433,13 +468,32 @@ class ReportsFragment : Fragment() {
         val isDark = isDarkMode(ctx)
         val trackColor = if (isDark) Color.parseColor("#1E293B") else Color.parseColor("#E2E8F0")
 
+        // forEachIndexed percorre a lista de metas dando também o índice (idx) de
+        // cada uma, junto com a meta em si (goal) — usado só pra saber se é a
+        // última (isLast), pra não desenhar margem extra depois dela.
         goals.forEachIndexed { idx, goal ->
+            // isLucro é um Boolean: true se essa meta específica é do tipo
+            // "lucro", false se é do tipo "gasto".
             val isLucro = goal.type == "lucro"
-            // Meta de gasto: progresso alto é ruim (estourou o limite).
-            // Meta de lucro: progresso alto é bom (bateu o lucro desejado) — cores invertidas.
+
+            // "spent" = quanto já foi gasto no mês relevante pra essa meta. Se a
+            // meta não tem categoria (goal.category vazio), usa o total geral de
+            // despesas (overallExpense). Senão, busca no Map categoryTotals pela
+            // categoria específica — "categoryTotals[goal.category]" pode devolver
+            // null se essa categoria não teve gasto nenhum este mês, por isso o
+            // "?: 0.0" (usa zero nesse caso).
             val spent = if (goal.category.isBlank()) overallExpense else (categoryTotals[goal.category] ?: 0.0)
+
+            // "current" é o valor de fato usado no cálculo de progresso: pra meta
+            // de lucro, é o lucro do mês (monthlyProfit, calculado em
+            // refreshGoalsProgress); pra meta de gasto, é "spent" de cima.
             val current = if (isLucro) monthlyProfit else spent
+
+            // A fórmula central: percentual = valor atual dividido pela meta,
+            // vezes 100. "if (goal.targetAmount > 0)" evita dividir por zero
+            // caso a meta tenha sido salva com valor zero por algum motivo.
             val pct = if (goal.targetAmount > 0) (current / goal.targetAmount * 100.0) else 0.0
+
             val label = if (isLucro) "Lucro mensal" else goal.category.ifBlank { "Geral (todas as despesas)" }
             val caption = if (isLucro) {
                 "Meta de lucro: receita menos despesa do mês"
@@ -448,13 +502,22 @@ class ReportsFragment : Fragment() {
             }
             val isLast = idx == goals.size - 1
 
+            // A cor da barra é o ponto mais importante de explicar: é a MESMA
+            // barra visual, mas com a leitura do percentual INVERTIDA conforme o
+            // tipo da meta.
             val barColor = if (isLucro) {
+                // Meta de LUCRO: 100%+ é bom (bateu a meta) -> verde (income).
+                // Entre 50% e 100% -> amarelo/laranja (ainda no caminho).
+                // Abaixo de 50% -> vermelho (longe do objetivo).
                 when {
                     pct >= 100.0 -> ContextCompat.getColor(ctx, R.color.income)
                     pct >= 50.0  -> Color.parseColor("#D97706")
                     else         -> ContextCompat.getColor(ctx, R.color.expense)
                 }
             } else {
+                // Meta de GASTO: 100%+ é ruim (estourou o limite) -> vermelho
+                // (expense). Entre 80% e 100% -> amarelo/laranja (atenção,
+                // chegando perto do limite). Abaixo de 80% -> verde (tranquilo).
                 when {
                     pct >= 100.0 -> ContextCompat.getColor(ctx, R.color.expense)
                     pct >= 80.0  -> Color.parseColor("#D97706")
@@ -546,6 +609,11 @@ class ReportsFragment : Fragment() {
         }
     }
 
+    // Gastos por dia da semana: soma o valor de cada despesa do mês atual no
+    // "balde" (0-6) do dia da semana em que ela aconteceu. A data é guardada como
+    // texto "yyyy-MM-dd", então é reconstruída num Calendar só pra descobrir o dia
+    // da semana (DAY_OF_WEEK do Java começa no domingo=1; "(dow + 5) % 7" reindexa
+    // pra a semana começar na segunda, que é como o gráfico exibe as barras).
     private fun setupWeekdayChart(barChart: BarChart, expenses: List<Transaction>) {
         val totals = DoubleArray(7) // 0=Seg .. 6=Dom
         for (t in expenses) {
@@ -599,6 +667,10 @@ class ReportsFragment : Fragment() {
         }
     }
 
+    // Gráfico de colunas de receitas x despesas por mês: agrupa TODAS as transações
+    // (não só o mês selecionado) por mês, somando receita e despesa separadamente.
+    // Se só existir um dos dois tipos no período (hasIncome != hasExpense), desenha
+    // uma única coluna por mês em vez de duas, pra não ter uma barra sempre zerada.
     private fun setupBarChart(barChart: BarChart, transactions: List<Transaction>) {
         val monthlyIncome  = mutableMapOf<Int, Float>()
         val monthlyExpense = mutableMapOf<Int, Float>()
@@ -627,7 +699,7 @@ class ReportsFragment : Fragment() {
         val axisGridColor = if (isDark) Color.parseColor("#2D3748") else Color.parseColor("#E5E7EB")
 
         fun hideZeroFormatter() = object : com.github.mikephil.charting.formatter.ValueFormatter() {
-            override fun getFormattedValue(value: Float) = if (value == 0f) "" else "R$${value.toInt()}"
+            override fun getFormattedValue(value: Float) = if (value == 0f) "" else "R$" + formatIntegerPtBr(value.toDouble())
         }
 
         // Só receita ou só despesa têm dados no período todo: em vez de um grupo de

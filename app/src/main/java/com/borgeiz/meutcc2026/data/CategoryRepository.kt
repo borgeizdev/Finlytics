@@ -36,6 +36,8 @@ class CategoryRepository(uid: String) {
         })
     }
 
+    // Cadastro no banco: sobrescreve o node inteiro users/{uid}/categories com as
+    // duas listas (income/expense) de uma vez.
     fun saveConfig(config: CategoryConfig): Task<Void> = ref.setValue(config)
 
     companion object {

@@ -102,8 +102,13 @@ class MainActivity : AppCompatActivity() {
             .commitAllowingStateLoss()
     }
 
+    // O app tem uma única Activity — as 4 abas (Dashboard, Transações, Relatórios,
+    // Perfil) são Fragments diferentes que se revezam dentro do mesmo
+    // frameContainer, trocados via FragmentTransaction.replace.
     private fun navigateTo(fragment: Fragment, tab: Int) {
         val now = System.currentTimeMillis()
+        // Debounce: ignora toques repetidos em menos de 200ms, evitando que um
+        // duplo-toque acidental dispare duas trocas de tela ao mesmo tempo.
         if (now - lastNavMs < 200) return
         val current = supportFragmentManager.findFragmentById(R.id.frameContainer)
         // currentTab por si só não basta: telas empilhadas por dentro de uma aba (ex:

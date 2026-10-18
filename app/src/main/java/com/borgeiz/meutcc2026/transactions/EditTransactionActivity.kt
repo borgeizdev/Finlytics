@@ -36,6 +36,9 @@ class EditTransactionActivity : AppCompatActivity() {
         val btnUpdate     = findViewById<Button>(R.id.btnUpdate)
         val btnDelete     = findViewById<Button>(R.id.btnDelete)
 
+        // Essa tela não busca a transação no Firebase de novo: recebe tudo pronto
+        // via Intent (montado em TransactionAdapter, no clique de um item da lista).
+        // Evita uma nova consulta ao banco só pra reabrir dados que a lista já tinha.
         val id       = intent.getStringExtra("id") ?: ""
         val type     = intent.getStringExtra("type") ?: ""
         val category = intent.getStringExtra("category") ?: ""
@@ -110,6 +113,10 @@ class EditTransactionActivity : AppCompatActivity() {
         val ref = FirebaseDatabase.getInstance().reference
             .child("users").child(uid).child("transactions").child(id)
 
+        // Atualizar segue o mesmo padrão do cadastro (AddTransactionFragment): monta
+        // um Transaction novo com os valores atuais dos campos e chama setValue —
+        // só que "ref" já aponta pro id existente, então em vez de criar um nó novo,
+        // SOBRESCREVE o que já existia. Não existe "update parcial" campo por campo.
         btnUpdate.setOnClickListener {
             val titleStr  = etTitle.text?.toString()?.trim() ?: ""
             if (titleStr.isEmpty()) { etTitle.error = "Informe o titulo"; return@setOnClickListener }
@@ -138,6 +145,9 @@ class EditTransactionActivity : AppCompatActivity() {
             AlertDialog.Builder(this)
                 .setTitle("Excluir transacao")
                 .setMessage("Tem certeza que deseja excluir esta transacao?")
+                // removeValue() apaga o nó inteiro daquele id no Firebase — exclusão
+                // de verdade, não uma marcação de "inativo". Por isso a confirmação
+                // antes: não tem como desfazer depois.
                 .setPositiveButton("Excluir") { _, _ ->
                     ref.removeValue().addOnSuccessListener {
                         Toast.makeText(this, "Excluido!", Toast.LENGTH_SHORT).show()

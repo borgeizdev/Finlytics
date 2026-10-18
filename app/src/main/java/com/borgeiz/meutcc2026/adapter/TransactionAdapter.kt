@@ -30,6 +30,9 @@ class TransactionAdapter(
 
     override fun getItemCount() = list.size
 
+    // O RecyclerView chama isto uma vez pra cada linha visível na tela (e recicla
+    // as views conforme rola). Decide o sinal (+/-) e a cor (verde/vermelho) só
+    // olhando pro type da transação.
     override fun onBindViewHolder(holder: TransactionViewHolder, position: Int) {
         val item = list[position]
         val ctx  = holder.itemView.context
@@ -45,6 +48,10 @@ class TransactionAdapter(
             holder.tvAmount.setTextColor(ContextCompat.getColor(ctx, R.color.expense))
         }
 
+        // Clique na linha inteira monta um Intent com todos os campos da transação
+        // como "extras" e abre a tela de edição — é esse Intent que
+        // EditTransactionActivity lê pra preencher o formulário, sem nova consulta
+        // ao Firebase.
         holder.itemView.setOnClickListener {
             val intent = Intent(ctx, EditTransactionActivity::class.java).apply {
                 putExtra("id",          item.id)

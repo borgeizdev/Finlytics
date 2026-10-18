@@ -104,29 +104,85 @@ class RecurringRepository(uid: String) {
      * cujo dia já chegou e que ainda não tenha lançamento no mês
      * (identificado pelo par recurringId + data esperada).
      */
+    // ==========================================================================
+    // checkAndPostIfNeeded() — o "motor" da recorrência, linha a linha
+    // ==========================================================================
+    // Parâmetros: "config" é a configuração de recorrências do usuário (lista de
+    // RecurringItem); "onPosted" é uma lambda OPCIONAL (repare no "= {}" — um
+    // valor padrão, uma lambda vazia que não faz nada) chamada uma vez pra cada
+    // transação lançada automaticamente, útil pra quem chamou mostrar um aviso.
     fun checkAndPostIfNeeded(config: RecurringConfig, onPosted: (Transaction) -> Unit = {}) {
+        // Descarta qualquer item com "dia do mês" fora do intervalo válido
+        // (proteção contra dado inconsistente). "in 1..31" testa se o número está
+        // dentro do INTERVALO (range) de 1 até 31, incluindo as pontas.
         val items = config.items.filter { it.dayOfMonth in 1..31 }
+        // Se não sobrou nenhum item recorrente configurado, nem vale a pena
+        // consultar o Firebase — sai cedo.
         if (items.isEmpty()) return
 
+        // Pega o dia, mês (+1 porque Calendar.MONTH é zero-indexado) e ano de HOJE.
         val cal   = Calendar.getInstance()
         val today = cal.get(Calendar.DAY_OF_MONTH)
         val month = cal.get(Calendar.MONTH) + 1
         val year  = cal.get(Calendar.YEAR)
 
+        // addListenerForSingleValueEvent: lê o nó de transações UMA VEZ (diferente
+        // de observe(), que fica escutando pra sempre) — faz sentido aqui porque
+        // isso roda só ao abrir o app, não precisa ficar reagindo a mudanças.
         txRef.addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                val existing = snapshot.children.mapNotNull { child ->
-                    child.getValue(Transaction::class.java)
-                }.filter { it.recurringId.isNotBlank() }
+
+                // Monta o conjunto (Set) de tudo que JÁ FOI LANÇADO antes, pra
+                // depois checar duplicidade. Em 3 passos encadeados:
+                val existing = snapshot.children
+                    // (1) desserializa cada filho em Transaction (descartando os
+                    // que não conseguirem, com mapNotNull).
+                    .mapNotNull { child -> child.getValue(Transaction::class.java) }
+                    // (2) mantém só as que TÊM um recurringId preenchido — ou
+                    // seja, que foram criadas por uma recorrência (transações
+                    // manuais não entram nessa checagem).
+                    .filter { it.recurringId.isNotBlank() }
+                    // (3) transforma cada Transaction num PAR (Pair) de
+                    // (recurringId, data) — "it.recurringId to it.date" cria esse
+                    // par usando a função infixa "to" do Kotlin — e .toSet() joga
+                    // tudo num Set (conjunto sem repetição), que permite checar
+                    // "isso já existe?" de forma muito rápida.
                     .map { it.recurringId to it.date }
                     .toSet()
 
+                // forEach percorre cada item recorrente configurado, um de cada vez.
                 items.forEach { recurring ->
+                    // Se o dia configurado pra esse item ainda não chegou este mês
+                    // (ex: hoje é dia 5 e o salário cai no dia 10), pula ele —
+                    // "return@forEach" sai só dessa iteração do loop, não da
+                    // função inteira (o rótulo @forEach identifica qual bloco
+                    // estamos "retornando").
                     if (today < recurring.dayOfMonth) return@forEach
+
+                    // Monta a data que ESSE lançamento deveria ter, no formato
+                    // "yyyy-MM-dd" — "%04d-%02d-%02d" são máscaras de formatação:
+                    // %04d = número inteiro com 4 dígitos, completando com zeros à
+                    // esquerda se precisar (ex: ano 2026 -> "2026"); %02d = 2
+                    // dígitos (ex: mês 3 -> "03", dia 5 -> "05"). É o que garante
+                    // o formato sempre igual, essencial pra comparação de texto
+                    // funcionar em outros lugares do app.
                     val expectedDate = "%04d-%02d-%02d".format(year, month, recurring.dayOfMonth)
+
+                    // AQUI é a checagem de duplicidade: monta o mesmo tipo de par
+                    // (id, data) que foi montado no Set "existing" acima, e testa
+                    // se ele já está lá dentro com o operador "in". Se já existe,
+                    // pula esse item — não lança de novo.
                     if ((recurring.id to expectedDate) in existing) return@forEach
 
+                    // Gera uma chave nova pra essa transação (mesmo mecanismo do
+                    // cadastro manual, ver AddTransactionFragment).
                     val key = txRef.push().key ?: return@forEach
+
+                    // Monta o objeto Transaction copiando os dados do
+                    // RecurringItem, e preenchendo "recurringId" com o id da
+                    // recorrência que a gerou — é esse campo que alimenta o Set
+                    // "existing" na próxima vez que essa função rodar, fechando o
+                    // ciclo de deduplicação.
                     val transaction = Transaction(
                         type = recurring.type,
                         title = recurring.title,
@@ -136,6 +192,9 @@ class RecurringRepository(uid: String) {
                         description = "Lançamento automático",
                         recurringId = recurring.id
                     )
+                    // Grava no banco; se der certo, chama a lambda onPosted
+                    // (recebida como parâmetro lá em cima) avisando qual
+                    // transação foi lançada.
                     txRef.child(key).setValue(transaction).addOnSuccessListener {
                         onPosted(transaction)
                     }

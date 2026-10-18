@@ -9,29 +9,30 @@ import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 
-/**
- * Ponto único de acesso a users/{uid}/transactions.
- * Centraliza o mapeamento snapshot -> Transaction (com id preenchido a
- * partir da chave do Firebase) para evitar que cada tela reimplemente
- * esse loop e divirja (uma delas já esqueceu de setar o id).
- */
 class TransactionsRepository(uid: String) {
 
     private val ref: DatabaseReference = FirebaseDatabase.getInstance().reference
         .child("users").child(uid).child("transactions")
-
-    /** Observa a lista completa em tempo real. Retorna o listener para remoção posterior em onDestroyView. */
     fun observe(onChange: (List<Transaction>) -> Unit): ValueEventListener {
+
         val listener = object : ValueEventListener {
+
+
             override fun onDataChange(snapshot: DataSnapshot) {
+
                 val list = snapshot.children.mapNotNull { item ->
+
                     item.getValue(Transaction::class.java)?.apply { id = item.key ?: "" }
                 }
+
                 onChange(list)
             }
+
             override fun onCancelled(error: DatabaseError) {}
         }
+
         ref.addValueEventListener(listener)
+
         return listener
     }
 
@@ -40,14 +41,18 @@ class TransactionsRepository(uid: String) {
     }
 
     fun add(transaction: Transaction): Task<Void> {
-        val key = ref.push().key ?: return Tasks.forException(IllegalStateException("Não foi possível gerar uma chave"))
+
+        val key = ref.push().key
+
+            ?: return Tasks.forException(IllegalStateException("Não foi possível gerar uma chave"))
         return ref.child(key).setValue(transaction)
     }
 
+
     fun update(id: String, transaction: Transaction): Task<Void> = ref.child(id).setValue(transaction)
+
 
     fun delete(id: String): Task<Void> = ref.child(id).removeValue()
 }
-
 fun List<Transaction>.incomeTotal(): Double = filter { it.type == "receita" }.sumOf { it.amount }
 fun List<Transaction>.expenseTotal(): Double = filter { it.type == "despesa" }.sumOf { it.amount }

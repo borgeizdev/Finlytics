@@ -45,7 +45,6 @@ class DashboardFragment : Fragment() {
 
     private val allTransactions = mutableListOf<Transaction>()
 
-    // Listeners armazenados para serem removidos em onDestroyView
     private var txRepo:          TransactionsRepository? = null
     private var txListener:      ValueEventListener?      = null
     private var nameListener:    ValueEventListener?      = null
@@ -148,24 +147,34 @@ class DashboardFragment : Fragment() {
     }
 
     private fun loadSummaryAndTransactions() {
+
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+
         val repo = TransactionsRepository(uid)
+
         txRepo = repo
+
         txListener = repo.observe { transactions ->
+
             allTransactions.clear()
             allTransactions.addAll(transactions)
+
             allTransactions.sortByDescending { it.date }
+
 
             val income  = transactions.incomeTotal()
             val expense = transactions.expenseTotal()
+
             val balance = income - expense
             tvBalance.text = formatMoneyPtBr(balance)
+
             tvBalance.setTextColor(
                 if (balance >= 0) android.graphics.Color.WHITE
                 else android.graphics.Color.parseColor("#FCA5A5")
             )
             tvIncome.text  = formatMoneyPtBr(income)
             tvExpense.text = formatMoneyPtBr(expense)
+
             updateTrends()
 
             val query = etSearch.text?.toString()?.trim() ?: ""
@@ -174,12 +183,15 @@ class DashboardFragment : Fragment() {
     }
 
     private fun updateTrends() {
+
         if (!isAdded) return
+
 
         fun inMonth(t: Transaction, year: Int, month: Int): Boolean {
             val parts = t.date.split("-")
             return parts.size >= 2 && parts[0].toIntOrNull() == year && parts[1].toIntOrNull() == month
         }
+
 
         val cal      = Calendar.getInstance()
         val curYear  = cal.get(Calendar.YEAR)
@@ -189,32 +201,38 @@ class DashboardFragment : Fragment() {
         val prevYear  = prevCal.get(Calendar.YEAR)
         val prevMonth = prevCal.get(Calendar.MONTH) + 1
 
+
         val curExpense  = allTransactions.filter { it.type == "despesa" && inMonth(it, curYear, curMonth) }.sumOf { it.amount }
         val prevExpense = allTransactions.filter { it.type == "despesa" && inMonth(it, prevYear, prevMonth) }.sumOf { it.amount }
         val curIncome   = allTransactions.filter { it.type == "receita" && inMonth(it, curYear, curMonth) }.sumOf { it.amount }
         val prevIncome  = allTransactions.filter { it.type == "receita" && inMonth(it, prevYear, prevMonth) }.sumOf { it.amount }
 
-        // Para despesas, subir é ruim (vermelho); para receitas, subir é bom (verde).
+
         applyTrend(tvExpenseTrend, curExpense, prevExpense, upIsGood = false)
         applyTrend(tvIncomeTrend, curIncome, prevIncome, upIsGood = true)
     }
 
     private fun applyTrend(target: TextView, current: Double, previous: Double, upIsGood: Boolean) {
         val ctx = context ?: return
+
         if (previous <= 0.0) {
             target.text = "Sem dado do mês passado"
             target.setTextColor(ContextCompat.getColor(ctx, R.color.text_hint))
             return
         }
+
         val pct = (current - previous) / previous * 100.0
+
         val isUp   = pct > 0.5
         val isDown = pct < -0.5
         val arrow  = if (isUp) "▲" else if (isDown) "▼" else "—"
+
         val colorRes = when {
-            !isUp && !isDown -> R.color.text_hint
-            isUp == upIsGood -> R.color.income
-            else             -> R.color.expense
+            !isUp && !isDown -> R.color.text_hint   // variação insignificante: cor neutra
+            isUp == upIsGood -> R.color.income      // "subiu" e isso é bom -> verde
+            else             -> R.color.expense     // ou "desceu quando bom seria subir", ou "subiu quando ruim é subir" -> vermelho
         }
+
         target.text = "$arrow ${"%.0f".format(kotlin.math.abs(pct))}% em relação ao mês passado"
         target.setTextColor(ContextCompat.getColor(ctx, colorRes))
     }

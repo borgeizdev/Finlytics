@@ -1,5 +1,8 @@
 package com.borgeiz.meutcc2026.model
 
+// Um lançamento que se repete todo mês no mesmo dia (salário, Netflix, aluguel).
+// Não é uma Transaction — é a "receita" que RecurringRepository usa pra GERAR
+// transações de verdade automaticamente (ver checkAndPostIfNeeded).
 data class RecurringItem(
     var id: String = "",
     var title: String = "",
