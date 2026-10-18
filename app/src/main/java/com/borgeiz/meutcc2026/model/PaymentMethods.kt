@@ -1,7 +1,8 @@
 package com.borgeiz.meutcc2026.model
 
-// Lista fixa no código, diferente de CategoryConfig: forma de pagamento é sempre
-// a mesma pra todo mundo, o usuário não customiza. Usada só em despesas — receita
+// Formas de pagamento padrão: semeiam CategoryConfig.payment na primeira leitura
+// e servem de reserva se a lista do usuário vier vazia. O usuário personaliza a
+// lista em Perfil > Categorias > Pagamento. Usada só em despesas — receita
 // não tem "forma de pagamento" no sentido de Pix/cartão/dinheiro.
 object PaymentMethods {
     val ALL = listOf(

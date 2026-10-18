@@ -17,6 +17,7 @@ import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.borgeiz.meutcc2026.adapter.TransactionAdapter
+import com.borgeiz.meutcc2026.data.CategoryRepository
 import com.borgeiz.meutcc2026.data.TransactionsRepository
 import com.borgeiz.meutcc2026.model.PaymentMethods
 import com.borgeiz.meutcc2026.model.Transaction
@@ -53,7 +54,17 @@ class TransactionsFragment : Fragment() {
         "Setembro", "Outubro", "Novembro", "Dezembro"
     )
 
-    private val paymentFilterOptions = listOf("Todas as formas de pagamento") + PaymentMethods.ALL + listOf(PaymentMethods.NAO_INFORMADO)
+    // Formas de pagamento personalizadas em Perfil > Categorias > Pagamento
+    // (começa com as padrão até a lista do usuário chegar do Firebase).
+    private var userPaymentMethods: List<String> = PaymentMethods.ALL
+
+    // Lista do usuário + formas já usadas em lançamentos antigos (que podem ter
+    // sido removidas da lista depois), para continuarem filtráveis.
+    private fun paymentFilterOptions(): List<String> {
+        val used = allTransactions.map { it.paymentMethod }.filter { it.isNotBlank() }
+        val methods = (userPaymentMethods + used).distinctBy { it.lowercase() }
+        return listOf("Todas as formas de pagamento") + methods + listOf(PaymentMethods.NAO_INFORMADO)
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -86,6 +97,9 @@ class TransactionsFragment : Fragment() {
     // filtros ou uma nova transação chegando refaz esse recorte automaticamente.
     private fun loadTransactions() {
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        CategoryRepository(uid).loadConfig { config ->
+            if (isAdded && config.payment.isNotEmpty()) userPaymentMethods = config.payment
+        }
         val repo = TransactionsRepository(uid)
         txRepo = repo
         txListener = repo.observe { transactions ->
@@ -219,6 +233,7 @@ class TransactionsFragment : Fragment() {
         root.addView(spCategory)
 
         addLabel(root, "Forma de pagamento")
+        val paymentFilterOptions = paymentFilterOptions()
         val spPayment = spinnerFor(paymentFilterOptions, filterPayment)
         root.addView(spPayment)
 

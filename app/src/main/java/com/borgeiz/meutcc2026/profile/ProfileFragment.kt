@@ -111,7 +111,7 @@ class ProfileFragment : Fragment() {
             MenuItem(R.drawable.ic_person,    R.color.primary, R.color.settings_badge_profile, "Configurações do perfil",   "Editar nome de usuário"),
             MenuItem(R.drawable.ic_palette,   R.color.primary, R.color.settings_badge_display, "Configurações de exibição", "Tema claro, escuro ou sistema"),
             MenuItem(R.drawable.ic_wallet,    R.color.income,  R.color.settings_badge_salary,  "Recorrências",               "Salário, assinaturas e contas fixas"),
-            MenuItem(R.drawable.ic_tag,       R.color.primary, R.color.settings_badge_category, "Categorias",                "Categorias de receita e despesa"),
+            MenuItem(R.drawable.ic_tag,       R.color.primary, R.color.settings_badge_category, "Categorias",                "Receita, despesa e formas de pagamento"),
             MenuItem(R.drawable.ic_bar_chart, R.color.primary, R.color.settings_badge_goal,     "Metas",                     "Limites de gasto mensais")
         )
 
@@ -837,8 +837,9 @@ class ProfileFragment : Fragment() {
         }
     }
 
-    // Tela de "Categorias": duas listas editáveis (receita/despesa) que alimentam
-    // os seletores de categoria usados em AddTransactionFragment, EditTransactionActivity
+    // Tela de "Categorias": três listas editáveis (receita/despesa/pagamento) que
+    // alimentam os seletores de categoria e de forma de pagamento usados em
+    // AddTransactionFragment, EditTransactionActivity, no filtro de TransactionsFragment
     // e nas próprias Recorrências/Metas. Ao salvar, sobrescreve inteiro o
     // CategoryConfig em users/{uid}/categories (CategoryRepository.saveConfig).
     private fun showCategoriesDialog(uid: String) {
@@ -940,7 +941,7 @@ class ProfileFragment : Fragment() {
         root.addView(tvTitle)
 
         val tvInfo = TextView(ctx).apply {
-            text = "Categorias usadas nos formulários de receita e despesa."
+            text = "Categorias e formas de pagamento usadas nos formulários."
             textSize = 13f
             setTextColor(0xFF64748B.toInt())
             layoutParams = LinearLayout.LayoutParams(
@@ -950,8 +951,8 @@ class ProfileFragment : Fragment() {
         }
         root.addView(tvInfo)
 
-        // Abas Receita / Despesa: a aba ativa decide em qual lista (income/expense)
-        // as categorias adicionadas entram.
+        // Abas Receita / Despesa / Pagamento: a aba ativa decide em qual lista
+        // (income/expense/payment) os itens adicionados entram.
         var currentTab = "receita"
 
         val btnTabReceita = MaterialButton(ctx).apply {
@@ -964,6 +965,13 @@ class ProfileFragment : Fragment() {
             text = "Despesa"
             textSize = 13f
             cornerRadius = dpToPx(10)
+            layoutParams = LinearLayout.LayoutParams(0, dpToPx(42), 1f).also { it.marginEnd = dpToPx(6) }
+        }
+        val btnTabPagamento = MaterialButton(ctx).apply {
+            text = "Pagamento"
+            textSize = 13f
+            cornerRadius = dpToPx(10)
+            setPadding(0, 0, 0, 0)
             layoutParams = LinearLayout.LayoutParams(0, dpToPx(42), 1f)
         }
         val tabRow = LinearLayout(ctx).apply {
@@ -974,6 +982,7 @@ class ProfileFragment : Fragment() {
         }
         tabRow.addView(btnTabReceita)
         tabRow.addView(btnTabDespesa)
+        tabRow.addView(btnTabPagamento)
         root.addView(tabRow)
 
         val containerIncome = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
@@ -981,38 +990,47 @@ class ProfileFragment : Fragment() {
             orientation = LinearLayout.VERTICAL
             visibility = View.GONE
         }
+        val containerPayment = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            visibility = View.GONE
+        }
         root.addView(containerIncome)
         root.addView(containerExpense)
+        root.addView(containerPayment)
+
+        // Cada aba: botão da aba e a lista que ela mostra.
+        val tabs = mapOf(
+            "receita" to (btnTabReceita to containerIncome),
+            "despesa" to (btnTabDespesa to containerExpense),
+            "pagamento" to (btnTabPagamento to containerPayment)
+        )
+
+        // Declarado aqui (e criado mais abaixo) para paintTabs poder trocar o texto.
+        lateinit var btnAddEntry: MaterialButton
 
         fun paintTabs() {
             val activeColor  = ctx.getColor(R.color.primary)
             val activeText   = ctx.getColor(R.color.on_primary)
             val inactiveBg   = ctx.getColor(R.color.bg_card_subtle)
             val inactiveText = ctx.getColor(R.color.text_secondary)
-            if (currentTab == "receita") {
-                btnTabReceita.backgroundTintList = ColorStateList.valueOf(activeColor)
-                btnTabReceita.setTextColor(activeText)
-                btnTabDespesa.backgroundTintList = ColorStateList.valueOf(inactiveBg)
-                btnTabDespesa.setTextColor(inactiveText)
-                containerIncome.visibility = View.VISIBLE
-                containerExpense.visibility = View.GONE
-            } else {
-                btnTabDespesa.backgroundTintList = ColorStateList.valueOf(activeColor)
-                btnTabDespesa.setTextColor(activeText)
-                btnTabReceita.backgroundTintList = ColorStateList.valueOf(inactiveBg)
-                btnTabReceita.setTextColor(inactiveText)
-                containerIncome.visibility = View.GONE
-                containerExpense.visibility = View.VISIBLE
+            for ((tab, pair) in tabs) {
+                val (button, container) = pair
+                val active = tab == currentTab
+                button.backgroundTintList = ColorStateList.valueOf(if (active) activeColor else inactiveBg)
+                button.setTextColor(if (active) activeText else inactiveText)
+                container.visibility = if (active) View.VISIBLE else View.GONE
             }
+            btnAddEntry.text =
+                if (currentTab == "pagamento") "+ Adicionar forma de pagamento" else "+ Adicionar categoria"
         }
-        paintTabs()
         btnTabReceita.setOnClickListener { currentTab = "receita"; paintTabs() }
         btnTabDespesa.setOnClickListener { currentTab = "despesa"; paintTabs() }
+        btnTabPagamento.setOnClickListener { currentTab = "pagamento"; paintTabs() }
 
         data class CategoryRowRefs(val etName: EditText)
 
         fun addRow(type: String, name: String = "") {
-            val container = if (type == "receita") containerIncome else containerExpense
+            val container = tabs.getValue(type).second
 
             val row = LinearLayout(ctx).apply {
                 orientation = LinearLayout.HORIZONTAL
@@ -1023,7 +1041,7 @@ class ProfileFragment : Fragment() {
             }
 
             val etName = EditText(ctx).apply {
-                hint = "Nome da categoria"
+                hint = if (type == "pagamento") "Nome da forma de pagamento" else "Nome da categoria"
                 setText(name)
                 isSingleLine = true
                 setHintTextColor(ctx.getColor(R.color.text_hint))
@@ -1065,16 +1083,26 @@ class ProfileFragment : Fragment() {
         fun collectCategories(): CategoryConfig? {
             val income = mutableListOf<String>()
             val expense = mutableListOf<String>()
+            val payment = mutableListOf<String>()
             if (!collectFrom(containerIncome, income)) return null
             if (!collectFrom(containerExpense, expense)) return null
+            if (!collectFrom(containerPayment, payment)) return null
+            // Lista vazia de formas de pagamento deixaria o formulário de despesa
+            // sem opção nenhuma — exige pelo menos uma.
+            if (payment.isEmpty()) {
+                Toast.makeText(ctx, "Adicione pelo menos uma forma de pagamento", Toast.LENGTH_SHORT).show()
+                currentTab = "pagamento"
+                paintTabs()
+                return null
+            }
             return CategoryConfig(
                 income = income.distinctBy { it.lowercase() },
-                expense = expense.distinctBy { it.lowercase() }
+                expense = expense.distinctBy { it.lowercase() },
+                payment = payment.distinctBy { it.lowercase() }
             )
         }
 
-        val btnAddEntry = MaterialButton(ctx).apply {
-            text = "+ Adicionar categoria"
+        btnAddEntry = MaterialButton(ctx).apply {
             textSize = 13f
             setBackgroundColor(primaryBlue)
             setTextColor(0xFFFFFFFF.toInt())
@@ -1084,6 +1112,7 @@ class ProfileFragment : Fragment() {
             ).also { it.topMargin = dpToPx(4); it.bottomMargin = dpToPx(20) }
         }
         root.addView(btnAddEntry)
+        paintTabs()
 
         val btnRow = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -1118,8 +1147,10 @@ class ProfileFragment : Fragment() {
             if (!isAdded) return@loadConfig
             containerIncome.removeAllViews()
             containerExpense.removeAllViews()
+            containerPayment.removeAllViews()
             config.income.forEach { addRow("receita", it) }
             config.expense.forEach { addRow("despesa", it) }
+            config.payment.forEach { addRow("pagamento", it) }
             attachRoot()
         }
 
@@ -1129,7 +1160,7 @@ class ProfileFragment : Fragment() {
             val config = collectCategories() ?: return@setOnClickListener
             categoryRepo.saveConfig(config)
                 .addOnSuccessListener {
-                    Toast.makeText(ctx, "Categorias salvas!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, "Categorias e formas de pagamento salvas!", Toast.LENGTH_SHORT).show()
                     dialog.dismiss()
                 }
                 .addOnFailureListener {

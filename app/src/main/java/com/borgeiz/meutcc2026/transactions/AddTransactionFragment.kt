@@ -48,11 +48,7 @@ class AddTransactionFragment : Fragment() {
         actvPaymentMethod = view.findViewById(R.id.actvPaymentMethod)
         tilPaymentMethod = view.findViewById(R.id.tilPaymentMethod)
 
-        val paymentAdapter = ArrayAdapter(
-            requireContext(), android.R.layout.simple_dropdown_item_1line, PaymentMethods.ALL
-        )
-        actvPaymentMethod.setAdapter(paymentAdapter)
-        actvPaymentMethod.setText(PaymentMethods.ALL[0], false)
+        setPaymentOptions(PaymentMethods.ALL)
 
         val etTitle       = view.findViewById<TextInputEditText>(R.id.etTitle)
         val etAmount      = view.findViewById<TextInputEditText>(R.id.etAmount)
@@ -68,6 +64,8 @@ class AddTransactionFragment : Fragment() {
             CategoryRepository(uid).loadConfig { config ->
                 if (!isAdded) return@loadConfig
                 categoryConfig = config
+                // Formas de pagamento personalizadas em Perfil > Categorias > Pagamento.
+                if (config.payment.isNotEmpty()) setPaymentOptions(config.payment)
                 setType(selectedType)
             }
         }
@@ -226,6 +224,18 @@ class AddTransactionFragment : Fragment() {
         }
 
         return view
+    }
+
+    private fun setPaymentOptions(options: List<String>) {
+        actvPaymentMethod.setAdapter(
+            ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, options)
+        )
+        // Mantém a escolha atual se ela ainda existir na lista nova (a lista do
+        // usuário chega do Firebase depois que a tela já abriu).
+        val current = actvPaymentMethod.text.toString()
+        if (options.none { it.equals(current, ignoreCase = true) }) {
+            actvPaymentMethod.setText(options[0], false)
+        }
     }
 
     private fun setType(type: String) {

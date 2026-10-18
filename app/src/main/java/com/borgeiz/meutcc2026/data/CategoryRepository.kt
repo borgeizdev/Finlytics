@@ -1,6 +1,7 @@
 package com.borgeiz.meutcc2026.data
 
 import com.borgeiz.meutcc2026.model.CategoryConfig
+import com.borgeiz.meutcc2026.model.PaymentMethods
 import com.google.android.gms.tasks.Task
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
@@ -24,14 +25,21 @@ class CategoryRepository(uid: String) {
         ref.addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 if (snapshot.exists()) {
-                    onResult(snapshot.getValue(CategoryConfig::class.java) ?: CategoryConfig())
+                    val config = snapshot.getValue(CategoryConfig::class.java) ?: CategoryConfig()
+                    // Configs salvas antes da aba "Pagamento" existir não têm a
+                    // lista de formas de pagamento: semeia com as padrão.
+                    if (config.payment.isEmpty()) {
+                        config.payment = DEFAULT_PAYMENT
+                        ref.child("payment").setValue(DEFAULT_PAYMENT)
+                    }
+                    onResult(config)
                     return
                 }
-                val defaults = CategoryConfig(income = DEFAULT_INCOME, expense = DEFAULT_EXPENSE)
+                val defaults = defaultConfig()
                 ref.setValue(defaults).addOnCompleteListener { onResult(defaults) }
             }
             override fun onCancelled(error: DatabaseError) {
-                onResult(CategoryConfig(income = DEFAULT_INCOME, expense = DEFAULT_EXPENSE))
+                onResult(defaultConfig())
             }
         })
     }
@@ -41,6 +49,11 @@ class CategoryRepository(uid: String) {
     fun saveConfig(config: CategoryConfig): Task<Void> = ref.setValue(config)
 
     companion object {
+        fun defaultConfig() = CategoryConfig(
+            income = DEFAULT_INCOME, expense = DEFAULT_EXPENSE, payment = DEFAULT_PAYMENT
+        )
+
+        val DEFAULT_PAYMENT = PaymentMethods.ALL
         val DEFAULT_INCOME = listOf(
             "Salario", "Freelance", "Investimentos",
             "Venda", "Presente", "Reembolso", "Outros"

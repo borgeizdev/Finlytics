@@ -94,21 +94,23 @@ class EditTransactionActivity : AppCompatActivity() {
             )
             val idx = cats.indexOfFirst { it.equals(category, ignoreCase = true) }
             if (idx >= 0) spCategory.setSelection(idx)
-        }
 
-        // Forma de pagamento (transações antigas podem não ter o campo preenchido)
-        val currentPaymentMethod = paymentMethod.ifBlank { PaymentMethods.NAO_INFORMADO }
-        val paymentMethods = PaymentMethods.ALL.toMutableList()
-        if (paymentMethods.none { it.equals(currentPaymentMethod, ignoreCase = true) }) {
-            paymentMethods.add(0, currentPaymentMethod)
+            // Forma de pagamento (transações antigas podem não ter o campo preenchido).
+            // Lista personalizada em Perfil > Categorias > Pagamento; se a forma salva
+            // não estiver mais nela, entra como opção para não ser trocada sem aviso.
+            val currentPaymentMethod = paymentMethod.ifBlank { PaymentMethods.NAO_INFORMADO }
+            val paymentMethods = config.payment.ifEmpty { PaymentMethods.ALL }.toMutableList()
+            if (paymentMethods.none { it.equals(currentPaymentMethod, ignoreCase = true) }) {
+                paymentMethods.add(0, currentPaymentMethod)
+            }
+            spPaymentMethod.adapter = ArrayAdapter(
+                this,
+                android.R.layout.simple_spinner_dropdown_item,
+                paymentMethods
+            )
+            val paymentIdx = paymentMethods.indexOfFirst { it.equals(currentPaymentMethod, ignoreCase = true) }
+            if (paymentIdx >= 0) spPaymentMethod.setSelection(paymentIdx)
         }
-        spPaymentMethod.adapter = ArrayAdapter(
-            this,
-            android.R.layout.simple_spinner_dropdown_item,
-            paymentMethods
-        )
-        val paymentIdx = paymentMethods.indexOfFirst { it.equals(currentPaymentMethod, ignoreCase = true) }
-        if (paymentIdx >= 0) spPaymentMethod.setSelection(paymentIdx)
 
         val ref = FirebaseDatabase.getInstance().reference
             .child("users").child(uid).child("transactions").child(id)
