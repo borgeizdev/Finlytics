@@ -46,7 +46,7 @@ class ReportsFragment : Fragment() {
 
     companion object {
         // Em memória (não persiste no disco): mantém a seleção do usuário ao navegar
-        // entre abas durante a sessão, mas volta pro padrão "Todos os meses" quando
+        // entre abas durante a sessão, mas volta pro padrão "Todos" quando
         // o processo do app morre e é reaberto.
         private var lastCatMonthSelection = 0
     }
@@ -58,7 +58,7 @@ class ReportsFragment : Fragment() {
     )
 
     private val monthLabelsFull = listOf(
-        "Todos os meses",
+        "Todos",
         "Janeiro", "Fevereiro", "Março", "Abril",
         "Maio", "Junho", "Julho", "Agosto",
         "Setembro", "Outubro", "Novembro", "Dezembro"
