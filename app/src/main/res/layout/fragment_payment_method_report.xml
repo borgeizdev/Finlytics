@@ -195,7 +195,7 @@
                 <com.github.mikephil.charting.charts.PieChart
                     android:id="@+id/pieChartPaymentMethod"
                     android:layout_width="match_parent"
-                    android:layout_height="260dp" />
+                    android:layout_height="310dp" />
 
                 <View
                     android:layout_width="match_parent"

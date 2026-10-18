@@ -191,7 +191,7 @@
                 <com.github.mikephil.charting.charts.PieChart
                     android:id="@+id/pieChart"
                     android:layout_width="match_parent"
-                    android:layout_height="260dp" />
+                    android:layout_height="310dp" />
 
                 <!-- Divisor entre gráfico e detalhamento -->
                 <View
