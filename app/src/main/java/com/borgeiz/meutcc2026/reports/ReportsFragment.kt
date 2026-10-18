@@ -682,6 +682,10 @@ class ReportsFragment : Fragment() {
             data = BarData(dataSet).apply { barWidth = 0.6f }
             description.isEnabled = false
             legend.isEnabled = false
+            // Sem zoom (pinça ou toque duplo); os 7 dias já cabem na tela.
+            setScaleEnabled(false)
+            setPinchZoom(false)
+            isDoubleTapToZoomEnabled = false
             setFitBars(true)
             xAxis.apply {
                 valueFormatter = IndexAxisValueFormatter(labels)

@@ -142,7 +142,8 @@ fun buildBreakdownRows(
         val fill = View(ctx).apply {
             layoutParams = LinearLayout.LayoutParams(
                 0, LinearLayout.LayoutParams.MATCH_PARENT,
-                pct.toFloat().coerceAtLeast(1f)
+                // Mínimo de 3 para a barrinha de um gasto pequeno ainda aparecer.
+                pct.toFloat().coerceAtLeast(3f)
             )
             background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
@@ -192,10 +193,19 @@ fun setupBreakdownPieChart(
         .sortedByDescending { it.value }
         .map { (label, value) -> PieEntry(value.toFloat(), label) }
 
+    // Percentuais desenhados FORA da pizza, ligados à fatia por uma linha: dentro
+    // de uma fatia pequena (ex: 1%) o texto não cabia e ficava ilegível.
+    val labelColor = if (isDark) Color.parseColor("#CBD5E1") else Color.parseColor("#334155")
     val dataSet = PieDataSet(entries, "").apply {
         this.colors = colors.take(entries.size).toMutableList()
         valueTextSize = 11f
-        valueTextColor = Color.WHITE
+        valueTextColor = labelColor
+        yValuePosition = PieDataSet.ValuePosition.OUTSIDE_SLICE
+        valueLinePart1OffsetPercentage = 85f
+        valueLinePart1Length = 0.35f
+        valueLinePart2Length = 0.25f
+        valueLineWidth = 1f
+        isUsingSliceColorAsValueLineColor = true
         valueFormatter = object : com.github.mikephil.charting.formatter.ValueFormatter() {
             override fun getFormattedValue(value: Float): String {
                 return if (value < 1f && value > 0f) "${formatPercentPtBr(value.toDouble())}%" else "${value.toInt()}%"
@@ -221,6 +231,14 @@ fun setupBreakdownPieChart(
         setEntryLabelColor(Color.TRANSPARENT)
         setDrawEntryLabels(false)
         legend.isEnabled = false
+        // Toda fatia ocupa pelo menos 12° do círculo, mesmo que o gasto seja
+        // minúsculo perto dos outros — senão ela vira um risco invisível. (O valor
+        // e o percentual reais continuam corretos no texto e na lista abaixo.)
+        minAngleForSlices = 12f
+        // Espaço nas bordas para os percentuais de fora não serem cortados.
+        setExtraOffsets(28f, 8f, 28f, 8f)
+        // Sem girar a pizza com o dedo.
+        isRotationEnabled = false
         animateY(800)
         invalidate()
     }
