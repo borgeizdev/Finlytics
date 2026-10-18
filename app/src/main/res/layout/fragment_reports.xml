@@ -201,11 +201,44 @@
                     android:layout_marginBottom="16dp"
                     android:background="@color/divider" />
 
+                <!-- Cabeçalho que recolhe/mostra o detalhamento -->
+                <LinearLayout
+                    android:id="@+id/llCatToggle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:id="@+id/tvCatToggle"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Categorias"
+                        android:textColor="@color/text_heading"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <ImageView
+                        android:id="@+id/ivCatToggle"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_expand_more"
+                        android:contentDescription="Recolher ou mostrar categorias"
+                        app:tint="@color/text_secondary" />
+                </LinearLayout>
+
                 <!-- Detalhamento por categoria (serve como legenda) -->
                 <LinearLayout
                     android:id="@+id/llCatBreakdown"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
                     android:orientation="vertical" />
 
             </LinearLayout>

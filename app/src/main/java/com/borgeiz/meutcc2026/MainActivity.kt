@@ -1,7 +1,11 @@
 package com.borgeiz.meutcc2026
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.content.res.ColorStateList
+import android.os.Build
 import android.os.Bundle
+import androidx.activity.result.contract.ActivityResultContracts
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -10,6 +14,7 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.borgeiz.meutcc2026.dashboard.DashboardFragment
 import com.borgeiz.meutcc2026.data.RecurringRepository
+import com.borgeiz.meutcc2026.notifications.TransactionNotifier
 import com.borgeiz.meutcc2026.profile.ProfileFragment
 import com.borgeiz.meutcc2026.reports.ReportsFragment
 import com.borgeiz.meutcc2026.transactions.AddTransactionFragment
@@ -86,6 +91,31 @@ class MainActivity : AppCompatActivity() {
         }
 
         checkAndPostRecurringIfNeeded()
+        startNotifications()
+    }
+
+    override fun onDestroy() {
+        notifier?.stop()
+        super.onDestroy()
+    }
+
+    // Notificações de lançamentos e de saldo baixo (ver TransactionNotifier).
+    // Ficam ativas enquanto o app está aberto. No Android 13+ pede a permissão
+    // de notificação uma vez; se o usuário negar, o app segue sem notificar.
+    private var notifier: TransactionNotifier? = null
+
+    private val notificationPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
+
+    private fun startNotifications() {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        notifier = TransactionNotifier(this, uid).also { it.start() }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {

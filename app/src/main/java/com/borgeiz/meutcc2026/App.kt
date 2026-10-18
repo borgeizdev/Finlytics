@@ -2,6 +2,7 @@ package com.borgeiz.meutcc2026
 
 import android.app.Application
 import androidx.appcompat.app.AppCompatDelegate
+import com.borgeiz.meutcc2026.notifications.NotificationHelper
 
 class App : Application() {
     override fun onCreate() {
@@ -16,5 +17,6 @@ class App : Application() {
         AppCompatDelegate.setDefaultNightMode(
             if (mode in validModes) mode else AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
         )
+        NotificationHelper.createChannels(this)
     }
 }

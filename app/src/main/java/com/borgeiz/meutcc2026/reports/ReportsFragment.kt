@@ -49,6 +49,8 @@ class ReportsFragment : Fragment() {
         // entre abas durante a sessão, mas volta pro padrão "Todos" quando
         // o processo do app morre e é reaberto.
         private var lastCatMonthSelection = 0
+        // Detalhamento de "Gastos por categoria" aberto ou recolhido (seta).
+        private var catBreakdownExpanded = true
     }
 
     private val monthLabels = listOf(
@@ -99,6 +101,8 @@ class ReportsFragment : Fragment() {
         val llCatBreakdown  = view.findViewById<LinearLayout>(R.id.llCatBreakdown)
         val pieChart        = view.findViewById<PieChart>(R.id.pieChart)
         val barChart        = view.findViewById<BarChart>(R.id.barChart)
+        val llCatToggle     = view.findViewById<LinearLayout>(R.id.llCatToggle)
+        val ivCatToggle     = view.findViewById<android.widget.ImageView>(R.id.ivCatToggle)
         val spCatMonth      = view.findViewById<Spinner>(R.id.spCatMonth)
         val btnPaymentMethodAnalysis = view.findViewById<MaterialButton>(R.id.btnPaymentMethodAnalysis)
 
@@ -123,15 +127,37 @@ class ReportsFragment : Fragment() {
                 .commit()
         }
 
-        spCatMonth.adapter = ArrayAdapter(
+        // getView é o item exibido no próprio spinner fechado: centraliza o texto
+        // ("Todos", "Março"...) dentro da caixa.
+        spCatMonth.adapter = object : ArrayAdapter<String>(
             requireContext(),
             android.R.layout.simple_spinner_dropdown_item,
             monthLabelsFull
-        )
+        ) {
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View =
+                (super.getView(position, convertView, parent) as TextView).apply {
+                    gravity = Gravity.CENTER
+                    textAlignment = View.TEXT_ALIGNMENT_CENTER
+                    setPadding(0, 0, 0, 0)
+                }
+        }
         spCatMonth.setSelection(lastCatMonthSelection)
 
         pieChart.setNoDataText("")
         barChart.setNoDataText("")
+
+        // Seta do detalhamento por categoria: para baixo = aberto, gira -90° = recolhido.
+        fun paintCatToggle(animate: Boolean) {
+            llCatBreakdown.visibility = if (catBreakdownExpanded) View.VISIBLE else View.GONE
+            val rotation = if (catBreakdownExpanded) 0f else -90f
+            if (animate) ivCatToggle.animate().rotation(rotation).setDuration(200).start()
+            else ivCatToggle.rotation = rotation
+        }
+        paintCatToggle(animate = false)
+        llCatToggle.setOnClickListener {
+            catBreakdownExpanded = !catBreakdownExpanded
+            paintCatToggle(animate = true)
+        }
 
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return view
         val db   = FirebaseDatabase.getInstance().reference.child("users").child(uid)
@@ -162,6 +188,12 @@ class ReportsFragment : Fragment() {
                 val cat = t.category.ifBlank { "Outros" }
                 categoryTotals[cat] = (categoryTotals[cat] ?: 0.0) + t.amount
             }
+
+            // Sem despesa no período não há o que recolher: esconde a seta e deixa
+            // a mensagem de "nenhuma despesa" sempre visível.
+            llCatToggle.visibility = if (categoryTotals.isEmpty()) View.GONE else View.VISIBLE
+            if (categoryTotals.isEmpty()) llCatBreakdown.visibility = View.VISIBLE
+            else paintCatToggle(animate = false)
 
             if (categoryTotals.isEmpty()) {
                 pieChart.visibility = View.GONE
@@ -672,25 +704,34 @@ class ReportsFragment : Fragment() {
     // Se só existir um dos dois tipos no período (hasIncome != hasExpense), desenha
     // uma única coluna por mês em vez de duas, pra não ter uma barra sempre zerada.
     private fun setupBarChart(barChart: BarChart, transactions: List<Transaction>) {
+        // Chave = ano * 100 + mês (ex: 202603), para março de 2025 e março de 2026
+        // não serem somados no mesmo mês.
         val monthlyIncome  = mutableMapOf<Int, Float>()
         val monthlyExpense = mutableMapOf<Int, Float>()
 
         for (t in transactions) {
             val parts = t.date.split("-")
             if (parts.size < 2) continue
+            val year  = parts[0].toIntOrNull() ?: continue
             val month = parts[1].toIntOrNull() ?: continue
-            if (t.type == "receita") monthlyIncome[month]  = (monthlyIncome[month]  ?: 0f) + t.amount.toFloat()
-            if (t.type == "despesa") monthlyExpense[month] = (monthlyExpense[month] ?: 0f) + t.amount.toFloat()
+            val key = year * 100 + month
+            if (t.type == "receita") monthlyIncome[key]  = (monthlyIncome[key]  ?: 0f) + t.amount.toFloat()
+            if (t.type == "despesa") monthlyExpense[key] = (monthlyExpense[key] ?: 0f) + t.amount.toFloat()
         }
 
-        val allMonths = (monthlyIncome.keys + monthlyExpense.keys).toSortedSet()
+        val allMonths = (monthlyIncome.keys + monthlyExpense.keys).toSortedSet().toList()
         if (allMonths.isEmpty()) {
             barChart.visibility = View.GONE
             return
         }
         barChart.visibility = View.VISIBLE
 
-        val labels = allMonths.map { month -> monthLabels.getOrElse(month) { "$month" } }
+        // Com mais de um ano no gráfico, o rótulo leva o ano junto (ex: "Mar/26").
+        val multiYear = allMonths.map { it / 100 }.distinct().size > 1
+        val labels = allMonths.map { key ->
+            val name = monthLabels.getOrElse(key % 100) { "${key % 100}" }
+            if (multiYear) "$name/${(key / 100) % 100}" else name
+        }
 
         val isDark = (resources.configuration.uiMode and
                 android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
@@ -698,8 +739,10 @@ class ReportsFragment : Fragment() {
         val axisTextColor = if (isDark) Color.parseColor("#94A3B8") else Color.parseColor("#6B7280")
         val axisGridColor = if (isDark) Color.parseColor("#2D3748") else Color.parseColor("#E5E7EB")
 
+        // Rótulos bem curtos em cima das barras ("950", "1,2k", "3,4M"), sem "R$":
+        // com receita e despesa lado a lado, rótulos longos se encostavam.
         fun hideZeroFormatter() = object : com.github.mikephil.charting.formatter.ValueFormatter() {
-            override fun getFormattedValue(value: Float) = if (value == 0f) "" else "R$" + formatIntegerPtBr(value.toDouble())
+            override fun getFormattedValue(value: Float) = if (value == 0f) "" else formatBarLabel(value)
         }
 
         // Só receita ou só despesa têm dados no período todo: em vez de um grupo de
@@ -709,13 +752,19 @@ class ReportsFragment : Fragment() {
         val hasExpense = monthlyExpense.values.any { it > 0f }
         val singleSeries = hasIncome != hasExpense
 
-        val barWidth: Float
+        // barSpace maior separa a barra de receita da de despesa, abrindo espaço
+        // entre os rótulos de valor das duas.
+        val groupSpace = 0.24f
+        val barSpace   = 0.1f
+        val barWidth   = if (singleSeries) 0.5f else 0.28f
+        // Largura que cada mês ocupa no eixo X.
+        val slotWidth  = if (singleSeries) 1f else barWidth * 2 + barSpace * 2 + groupSpace
+
         if (singleSeries) {
-            barWidth = 0.3f
             val label = if (hasIncome) "Receitas" else "Despesas"
             val color = if (hasIncome) Color.parseColor("#16A34A") else Color.parseColor("#DC2626")
-            val entries = allMonths.mapIndexed { idx, month ->
-                BarEntry(idx.toFloat(), (if (hasIncome) monthlyIncome[month] else monthlyExpense[month]) ?: 0f)
+            val entries = allMonths.mapIndexed { idx, key ->
+                BarEntry(idx.toFloat(), (if (hasIncome) monthlyIncome[key] else monthlyExpense[key]) ?: 0f)
             }
             val dataSet = BarDataSet(entries, label).apply {
                 this.color = color
@@ -725,15 +774,11 @@ class ReportsFragment : Fragment() {
             }
             barChart.data = BarData(dataSet).apply { this.barWidth = barWidth }
         } else {
-            val groupSpace = 0.4f
-            val barSpace   = 0.05f
-            barWidth = 0.25f
-
             val incomeEntries  = mutableListOf<BarEntry>()
             val expenseEntries = mutableListOf<BarEntry>()
-            allMonths.forEachIndexed { idx, month ->
-                incomeEntries.add(BarEntry(idx.toFloat(), monthlyIncome[month]  ?: 0f))
-                expenseEntries.add(BarEntry(idx.toFloat(), monthlyExpense[month] ?: 0f))
+            allMonths.forEachIndexed { idx, key ->
+                incomeEntries.add(BarEntry(idx.toFloat(), monthlyIncome[key]  ?: 0f))
+                expenseEntries.add(BarEntry(idx.toFloat(), monthlyExpense[key] ?: 0f))
             }
 
             val incomeSet = BarDataSet(incomeEntries, "Receitas").apply {
@@ -754,9 +799,21 @@ class ReportsFragment : Fragment() {
             barData.groupBars(0f, groupSpace, barSpace)
         }
 
+        // Poucos meses na tela de uma vez (4 com receita+despesa, 6 com uma série
+        // só); o resto fica acessível arrastando para os lados. Antes, um ano
+        // inteiro (24 barras) dividia 280dp e os valores ficavam encavalados.
+        val maxVisibleMonths = if (singleSeries) 6 else 4
+
         barChart.apply {
+            fitScreen()
             description.isEnabled = false
             setFitBars(true)
+            setScaleEnabled(false)
+            isDragEnabled = true
+            setPinchZoom(false)
+            isDoubleTapToZoomEnabled = false
+            setDrawValueAboveBar(true)
+            extraTopOffset = 8f
             xAxis.apply {
                 valueFormatter = IndexAxisValueFormatter(labels)
                 position = XAxis.XAxisPosition.BOTTOM
@@ -764,28 +821,33 @@ class ReportsFragment : Fragment() {
                 setDrawGridLines(false)
                 textSize = 11f
                 textColor = axisTextColor
+                labelCount = minOf(allMonths.size, maxVisibleMonths)
                 if (singleSeries) {
                     setCenterAxisLabels(false)
                     axisMinimum = -0.5f
                     axisMaximum = allMonths.size - 0.5f
                 } else {
-                    val groupWidthVal = barWidth * 2 + 0.05f * 2 + 0.4f
                     setCenterAxisLabels(true)
                     if (allMonths.size == 1) {
                         // Um único mês: soma um espaço vazio simétrico dos dois lados do
                         // grupo pra ele ficar centralizado em vez de colado na borda.
-                        axisMinimum = -groupWidthVal
-                        axisMaximum = groupWidthVal * 2
+                        axisMinimum = -slotWidth
+                        axisMaximum = slotWidth * 2
                     } else {
                         axisMinimum = 0f
-                        axisMaximum = groupWidthVal * allMonths.size
+                        axisMaximum = slotWidth * allMonths.size
                     }
                 }
             }
             axisLeft.apply {
                 axisMinimum = 0f
+                // Espaço acima da barra mais alta para o rótulo de valor não ser cortado.
+                spaceTop = 18f
                 textColor = axisTextColor
                 gridColor = axisGridColor
+                valueFormatter = object : com.github.mikephil.charting.formatter.ValueFormatter() {
+                    override fun getFormattedValue(value: Float) = formatCompactMoney(value)
+                }
             }
             axisRight.isEnabled = false
             legend.apply {
@@ -794,9 +856,44 @@ class ReportsFragment : Fragment() {
                 formToTextSpace = 8f
                 yOffset = 12f
             }
+            // Toque não destaca barra (não há mais resumo para mostrar).
+            setHighlightPerTapEnabled(false)
             setBackgroundColor(Color.TRANSPARENT)
+            notifyDataSetChanged()
+            if (allMonths.size > maxVisibleMonths) {
+                setVisibleXRangeMaximum(slotWidth * maxVisibleMonths)
+                // Abre mostrando os meses mais recentes (o fim do eixo).
+                moveViewToX(xAxis.axisMaximum)
+            }
             animateY(600)
             invalidate()
         }
+    }
+
+    /** Rótulo curto de barra: "950", "1,2k", "3,4M". */
+    private fun formatBarLabel(value: Float): String {
+        val v = value.toDouble()
+        return when {
+            v >= 1_000_000 -> formatOneDecimal(v / 1_000_000) + "M"
+            v >= 1_000     -> formatOneDecimal(v / 1_000) + "k"
+            else           -> formatIntegerPtBr(v)
+        }
+    }
+
+    /** Valor abreviado para rótulos de gráfico: "R$950", "R$1,2 mil", "R$3,4 mi". */
+    private fun formatCompactMoney(value: Float): String {
+        val v = value.toDouble()
+        return when {
+            v >= 1_000_000 -> "R$" + formatOneDecimal(v / 1_000_000) + " mi"
+            v >= 1_000     -> "R$" + formatOneDecimal(v / 1_000) + " mil"
+            else           -> "R$" + formatIntegerPtBr(v)
+        }
+    }
+
+    /** Uma casa decimal com vírgula, sem ",0" no fim (ex: 1.25 -> "1,3", 12.0 -> "12"). */
+    private fun formatOneDecimal(v: Double): String {
+        val rounded = Math.round(v * 10) / 10.0
+        return if (rounded % 1.0 == 0.0) formatIntegerPtBr(rounded)
+        else String.format(java.util.Locale("pt", "BR"), "%.1f", rounded)
     }
 }
