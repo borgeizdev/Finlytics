@@ -54,7 +54,7 @@
     <!-- Ponta da seta (aparece quando a linha chega ao fim). -->
     <path
         android:name="arrow_head_path"
-        android:pathData="M88.4,33.2 L102,30 L100.3,43.9"
+        android:pathData="M92.3,32.3 L102,30 L100.8,39.9"
         android:strokeColor="@color/primary_text_subtle"
         android:strokeWidth="5"
         android:strokeLineCap="round"
