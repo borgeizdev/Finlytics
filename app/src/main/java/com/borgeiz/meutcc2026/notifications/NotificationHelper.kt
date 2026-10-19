@@ -20,7 +20,11 @@ import com.borgeiz.meutcc2026.R
  */
 object NotificationHelper {
 
-    const val CHANNEL_TRANSACTIONS = "transactions"
+    // Canal silencioso. O ID mudou de "transactions" para "transactions_silent"
+    // porque o Android não deixa alterar o som/importância de um canal depois de
+    // criado — só criando outro. O antigo é apagado em createChannels.
+    const val CHANNEL_TRANSACTIONS = "transactions_silent"
+    private const val OLD_CHANNEL_TRANSACTIONS = "transactions"
     const val CHANNEL_BALANCE = "balance"
 
     // IDs fixos para o alerta de saldo (um novo substitui o anterior em vez de
@@ -31,8 +35,10 @@ object NotificationHelper {
     fun createChannels(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = context.getSystemService(NotificationManager::class.java)
+        manager.deleteNotificationChannel(OLD_CHANNEL_TRANSACTIONS)
+        // IMPORTANCE_LOW: aparece na barra de notificações, mas sem som nem vibração.
         manager.createNotificationChannel(
-            NotificationChannel(CHANNEL_TRANSACTIONS, "Lançamentos", NotificationManager.IMPORTANCE_DEFAULT)
+            NotificationChannel(CHANNEL_TRANSACTIONS, "Lançamentos", NotificationManager.IMPORTANCE_LOW)
                 .apply { description = "Avisos quando uma receita ou despesa é registrada, editada ou excluída" }
         )
         manager.createNotificationChannel(
@@ -69,10 +75,12 @@ object NotificationHelper {
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setColor(ContextCompat.getColor(context, R.color.primary))
+            // Antes do Android 8 não existem canais: o som é controlado aqui.
             .setPriority(
                 if (channel == CHANNEL_BALANCE) NotificationCompat.PRIORITY_HIGH
-                else NotificationCompat.PRIORITY_DEFAULT
+                else NotificationCompat.PRIORITY_LOW
             )
+            .setSilent(channel == CHANNEL_TRANSACTIONS)
             .setContentIntent(pending)
             .setAutoCancel(true)
             .build()
