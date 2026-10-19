@@ -1,5 +1,8 @@
 package com.borgeiz.meutcc2026.reports
 
+import com.borgeiz.meutcc2026.util.formatDateDisplay
+import com.borgeiz.meutcc2026.util.toStoredDate
+import com.borgeiz.meutcc2026.util.splitDisplayDate
 import com.borgeiz.meutcc2026.R
 import android.app.DatePickerDialog
 import android.os.Bundle
@@ -67,18 +70,19 @@ class PaymentMethodReportFragment : Fragment() {
 
         val today = Calendar.getInstance()
         etEndDate.setText(
-            "%d-%02d-%02d".format(today.get(Calendar.YEAR), today.get(Calendar.MONTH) + 1, today.get(Calendar.DAY_OF_MONTH))
+            formatDateDisplay(today.get(Calendar.YEAR), today.get(Calendar.MONTH) + 1, today.get(Calendar.DAY_OF_MONTH))
         )
         today.set(Calendar.DAY_OF_MONTH, 1)
         etStartDate.setText(
-            "%d-%02d-%02d".format(today.get(Calendar.YEAR), today.get(Calendar.MONTH) + 1, today.get(Calendar.DAY_OF_MONTH))
+            formatDateDisplay(today.get(Calendar.YEAR), today.get(Calendar.MONTH) + 1, today.get(Calendar.DAY_OF_MONTH))
         )
 
         var allTransactions = listOf<Transaction>()
 
         fun refresh() {
-            val start = etStartDate.text?.toString()?.trim().orEmpty()
-            val end   = etEndDate.text?.toString()?.trim().orEmpty()
+            // Campos mostram "2026/10/18"; a comparação usa o formato salvo "2026-10-18".
+            val start = toStoredDate(etStartDate.text?.toString().orEmpty())
+            val end   = toStoredDate(etEndDate.text?.toString().orEmpty())
             val typeFilter = when (spTypeFilter.selectedItemPosition) {
                 1 -> "receita"
                 2 -> "despesa"
@@ -118,9 +122,9 @@ class PaymentMethodReportFragment : Fragment() {
         }
 
         fun pickDate(field: TextInputEditText) {
-            val parts = field.text?.toString()?.split("-")
+            val parts = splitDisplayDate(field.text?.toString())
             val cal = Calendar.getInstance()
-            if (parts != null && parts.size == 3) {
+            if (parts != null) {
                 parts[0].toIntOrNull()?.let { cal.set(Calendar.YEAR, it) }
                 parts[1].toIntOrNull()?.let { cal.set(Calendar.MONTH, it - 1) }
                 parts[2].toIntOrNull()?.let { cal.set(Calendar.DAY_OF_MONTH, it) }
@@ -128,7 +132,7 @@ class PaymentMethodReportFragment : Fragment() {
             DatePickerDialog(
                 requireContext(),
                 { _, y, m, d ->
-                    field.setText("%d-%02d-%02d".format(y, m + 1, d))
+                    field.setText(formatDateDisplay(y, m + 1, d))
                     refresh()
                 },
                 cal.get(Calendar.YEAR),

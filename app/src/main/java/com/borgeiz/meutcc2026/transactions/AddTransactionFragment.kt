@@ -1,5 +1,7 @@
 package com.borgeiz.meutcc2026.transactions
 
+import com.borgeiz.meutcc2026.util.formatDateDisplay
+import com.borgeiz.meutcc2026.util.toStoredDate
 import com.borgeiz.meutcc2026.R
 import android.app.DatePickerDialog
 import android.content.res.ColorStateList
@@ -77,7 +79,7 @@ class AddTransactionFragment : Fragment() {
             val cal = Calendar.getInstance()
             DatePickerDialog(
                 requireContext(),
-                { _, y, m, d -> etDate.setText("%d-%02d-%02d".format(y, m + 1, d)) },
+                { _, y, m, d -> etDate.setText(formatDateDisplay(y, m + 1, d)) },
                 cal.get(Calendar.YEAR),
                 cal.get(Calendar.MONTH),
                 cal.get(Calendar.DAY_OF_MONTH)
@@ -120,7 +122,8 @@ class AddTransactionFragment : Fragment() {
             // "operador Elvis": se tudo antes dele der null, usa "" (string
             // vazia) como valor de reserva.
             val titleStr  = etTitle.text?.toString()?.trim() ?: ""
-            val dateStr   = etDate.text?.toString()?.trim() ?: ""
+            // Campo mostra "2026/10/18"; salva no formato "2026-10-18".
+            val dateStr   = toStoredDate(etDate.text?.toString() ?: "")
             val descStr   = etDescription.text?.toString()?.trim() ?: ""
 
             // Validação do título: se ficou vazio depois do trim, mostra erro

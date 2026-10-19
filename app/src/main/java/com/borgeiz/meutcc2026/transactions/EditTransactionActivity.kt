@@ -1,5 +1,8 @@
 package com.borgeiz.meutcc2026.transactions
 
+import com.borgeiz.meutcc2026.util.formatDateDisplay
+import com.borgeiz.meutcc2026.util.toStoredDate
+import com.borgeiz.meutcc2026.util.splitDisplayDate
 import com.borgeiz.meutcc2026.R
 import android.app.DatePickerDialog
 import android.os.Bundle
@@ -58,20 +61,20 @@ class EditTransactionActivity : AppCompatActivity() {
         etAmount.setText(intent.getDoubleExtra("amount", 0.0).let {
             if (it == 0.0) "" else formatAmountInputPtBr(it)
         })
-        etDate.setText(intent.getStringExtra("date"))
+        etDate.setText(formatDateDisplay(intent.getStringExtra("date") ?: ""))
         etDescription.setText(intent.getStringExtra("description"))
 
         etDate.setOnClickListener {
-            val parts = etDate.text?.toString()?.split("-")
+            val parts = splitDisplayDate(etDate.text?.toString())
             val cal = Calendar.getInstance()
-            if (parts != null && parts.size == 3) {
+            if (parts != null) {
                 parts[0].toIntOrNull()?.let { cal.set(Calendar.YEAR, it) }
                 parts[1].toIntOrNull()?.let { cal.set(Calendar.MONTH, it - 1) }
                 parts[2].toIntOrNull()?.let { cal.set(Calendar.DAY_OF_MONTH, it) }
             }
             DatePickerDialog(
                 this,
-                { _, y, m, d -> etDate.setText("%d-%02d-%02d".format(y, m + 1, d)) },
+                { _, y, m, d -> etDate.setText(formatDateDisplay(y, m + 1, d)) },
                 cal.get(Calendar.YEAR),
                 cal.get(Calendar.MONTH),
                 cal.get(Calendar.DAY_OF_MONTH)
@@ -131,7 +134,7 @@ class EditTransactionActivity : AppCompatActivity() {
                 title       = titleStr,
                 amount      = amount,
                 category    = spCategory.selectedItem?.toString() ?: "",
-                date        = etDate.text?.toString()?.trim() ?: "",
+                date        = toStoredDate(etDate.text?.toString() ?: ""),
                 description = etDescription.text?.toString()?.trim() ?: "",
                 paymentMethod = if (type == "receita" || selectedPaymentMethod == PaymentMethods.NAO_INFORMADO) "" else selectedPaymentMethod
             )

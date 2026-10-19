@@ -1,5 +1,6 @@
 package com.borgeiz.meutcc2026.profile
 
+import com.borgeiz.meutcc2026.util.formatDateDisplay
 import com.borgeiz.meutcc2026.R
 import android.app.AlertDialog
 import android.content.Context
@@ -867,7 +868,7 @@ class ProfileFragment : Fragment() {
                     if (config.items.isNotEmpty()) recurringRepo.checkAndPostIfNeeded(config) { tx ->
                         if (isAdded) Toast.makeText(
                             ctx,
-                            "${formatMoneyPtBr(tx.amount)} lançado para ${tx.date}",
+                            "${formatMoneyPtBr(tx.amount)} lançado para ${formatDateDisplay(tx.date)}",
                             Toast.LENGTH_SHORT
                         ).show()
                     }

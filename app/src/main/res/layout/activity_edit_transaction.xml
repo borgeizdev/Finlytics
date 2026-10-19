@@ -123,7 +123,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="16dp"
-                    android:hint="Data (AAAA-MM-DD)"
+                    android:hint="Data (DD/MM/AAAA)"
                     app:startIconDrawable="@drawable/ic_calendar"
                     app:boxCornerRadiusTopStart="12dp"
                     app:boxCornerRadiusTopEnd="12dp"

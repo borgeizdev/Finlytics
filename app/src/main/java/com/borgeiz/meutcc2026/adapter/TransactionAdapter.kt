@@ -1,5 +1,6 @@
 package com.borgeiz.meutcc2026.adapter
 
+import com.borgeiz.meutcc2026.util.formatDateDisplay
 import android.content.Intent
 import android.view.LayoutInflater
 import android.view.View
@@ -38,7 +39,7 @@ class TransactionAdapter(
         val ctx  = holder.itemView.context
 
         holder.tvTitle.text = item.title
-        holder.tvInfo.text  = "${item.category}  ·  ${item.date}"
+        holder.tvInfo.text  = "${item.category}  ·  ${formatDateDisplay(item.date)}"
 
         if (item.type == "receita") {
             holder.tvAmount.text = "+" + formatMoneyPtBr(item.amount)
