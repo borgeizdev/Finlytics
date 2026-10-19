@@ -956,25 +956,24 @@ class ProfileFragment : Fragment() {
         // (income/expense/payment) os itens adicionados entram.
         var currentTab = "receita"
 
-        val btnTabReceita = MaterialButton(ctx).apply {
-            text = "Receita"
+        // Três abas dividindo a largura: sem o padding lateral e a largura mínima
+        // padrão do MaterialButton, que cortavam o texto ("Despes...").
+        fun tabButton(label: String, isLast: Boolean) = MaterialButton(ctx).apply {
+            text = label
             textSize = 13f
             cornerRadius = dpToPx(10)
-            layoutParams = LinearLayout.LayoutParams(0, dpToPx(42), 1f).also { it.marginEnd = dpToPx(6) }
-        }
-        val btnTabDespesa = MaterialButton(ctx).apply {
-            text = "Despesa"
-            textSize = 13f
-            cornerRadius = dpToPx(10)
-            layoutParams = LinearLayout.LayoutParams(0, dpToPx(42), 1f).also { it.marginEnd = dpToPx(6) }
-        }
-        val btnTabPagamento = MaterialButton(ctx).apply {
-            text = "Pagamento"
-            textSize = 13f
-            cornerRadius = dpToPx(10)
-            setPadding(0, 0, 0, 0)
+            isAllCaps = false
+            letterSpacing = 0f
+            maxLines = 1
+            minWidth = 0
+            minimumWidth = 0
+            setPadding(dpToPx(2), 0, dpToPx(2), 0)
             layoutParams = LinearLayout.LayoutParams(0, dpToPx(42), 1f)
+                .also { if (!isLast) it.marginEnd = dpToPx(6) }
         }
+        val btnTabReceita = tabButton("Receita", isLast = false)
+        val btnTabDespesa = tabButton("Despesa", isLast = false)
+        val btnTabPagamento = tabButton("Pagamento", isLast = true)
         val tabRow = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
             layoutParams = LinearLayout.LayoutParams(

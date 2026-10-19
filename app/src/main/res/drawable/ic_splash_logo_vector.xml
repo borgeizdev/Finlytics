@@ -5,16 +5,6 @@
     android:viewportWidth="120"
     android:viewportHeight="120">
 
-    <path
-        android:name="swoosh_path"
-        android:pathData="M18,90 C36,90 42,58 64,52 C82,47 92,42 104,30"
-        android:strokeColor="@color/primary_text_subtle"
-        android:strokeWidth="5"
-        android:strokeLineCap="round"
-        android:strokeAlpha="0.9"
-        android:trimPathStart="0"
-        android:trimPathEnd="0" />
-
     <group
         android:name="bar1_group"
         android:pivotX="36"
@@ -47,5 +37,28 @@
             android:fillColor="@color/primary"
             android:pathData="M76,94 L76,42 A4,4 0 0 1 80,38 L88,38 A4,4 0 0 1 92,42 L92,94 Z" />
     </group>
+
+    <!-- Linha de tendência em seta, desenhada por cima das colunas: sobe na
+         diagonal, desce um pouco, e sobe de novo até a ponta da seta. -->
+    <path
+        android:name="swoosh_path"
+        android:pathData="M18,92 L50,58 L66,70 L102,30"
+        android:strokeColor="@color/primary_text_subtle"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeAlpha="0.9"
+        android:trimPathStart="0"
+        android:trimPathEnd="0" />
+
+    <!-- Ponta da seta (aparece quando a linha chega ao fim). -->
+    <path
+        android:name="arrow_head_path"
+        android:pathData="M88.4,33.2 L102,30 L100.3,43.9"
+        android:strokeColor="@color/primary_text_subtle"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeAlpha="0" />
 
 </vector>

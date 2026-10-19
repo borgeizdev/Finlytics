@@ -18,4 +18,8 @@
         android:name="swoosh_path"
         android:animation="@animator/splash_swoosh_anim" />
 
+    <target
+        android:name="arrow_head_path"
+        android:animation="@animator/splash_arrow_head_anim" />
+
 </animated-vector>
