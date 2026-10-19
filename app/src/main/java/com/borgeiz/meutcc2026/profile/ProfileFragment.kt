@@ -14,7 +14,6 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.fragment.app.Fragment
 import com.borgeiz.meutcc2026.auth.LoginActivity
 import com.borgeiz.meutcc2026.data.CategoryRepository
-import com.borgeiz.meutcc2026.data.DemoDataSeeder
 import com.borgeiz.meutcc2026.data.GoalRepository
 import com.borgeiz.meutcc2026.data.RecurringRepository
 import com.borgeiz.meutcc2026.model.CategoryConfig
@@ -114,8 +113,7 @@ class ProfileFragment : Fragment() {
             MenuItem(R.drawable.ic_palette,   R.color.primary, R.color.settings_badge_display, "Configurações de exibição", "Tema claro, escuro ou sistema"),
             MenuItem(R.drawable.ic_wallet,    R.color.income,  R.color.settings_badge_salary,  "Recorrências",               "Salário, assinaturas e contas fixas"),
             MenuItem(R.drawable.ic_tag,       R.color.primary, R.color.settings_badge_category, "Categorias",                "Receita, despesa e formas de pagamento"),
-            MenuItem(R.drawable.ic_bar_chart, R.color.primary, R.color.settings_badge_goal,     "Metas",                     "Limites de gasto mensais"),
-            MenuItem(R.drawable.ic_bar_chart, R.color.primary, R.color.settings_badge_display,  "Dados de demonstração",     "Gerar ou remover um ano de lançamentos fictícios")
+            MenuItem(R.drawable.ic_bar_chart, R.color.primary, R.color.settings_badge_goal,     "Metas",                     "Limites de gasto mensais")
         )
 
         val dialog = AlertDialog.Builder(ctx)
@@ -141,7 +139,6 @@ class ProfileFragment : Fragment() {
                         2 -> showRecurringItemsDialog(uid)
                         3 -> showCategoriesDialog(uid)
                         4 -> showGoalsDialog(uid)
-                        5 -> showDemoDataDialog(uid)
                     }
                 }
             }
@@ -214,45 +211,6 @@ class ProfileFragment : Fragment() {
                 cornerRadius = dpToPx(20).toFloat()
             }
         )
-    }
-
-    // "Dados de demonstração": preenche a conta com lançamentos fictícios de
-    // janeiro a dezembro do ano atual (DemoDataSeeder), para apresentar o app com
-    // gráficos e relatórios cheios. Remover apaga só esses lançamentos — os
-    // cadastrados de verdade pelo usuário não são tocados.
-    private fun showDemoDataDialog(uid: String) {
-        val ctx = requireContext()
-        val year = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
-        val seeder = DemoDataSeeder(uid)
-
-        AlertDialog.Builder(ctx)
-            .setTitle("Dados de demonstração")
-            .setMessage(
-                "Gera lançamentos fictícios de janeiro a dezembro de $year (salário, contas, " +
-                "mercado, lazer...) para demonstrar o app.\n\n" +
-                "Seus lançamentos reais não são alterados, e você pode remover os dados " +
-                "de demonstração quando quiser."
-            )
-            .setPositiveButton("Gerar") { _, _ ->
-                seeder.generate(year)
-                    .addOnSuccessListener {
-                        Toast.makeText(ctx, "Dados de demonstração de $year gerados!", Toast.LENGTH_SHORT).show()
-                    }
-                    .addOnFailureListener {
-                        Toast.makeText(ctx, "Erro: ${it.message}", Toast.LENGTH_LONG).show()
-                    }
-            }
-            .setNeutralButton("Remover") { _, _ ->
-                seeder.clear()
-                    .addOnSuccessListener {
-                        Toast.makeText(ctx, "Dados de demonstração removidos", Toast.LENGTH_SHORT).show()
-                    }
-                    .addOnFailureListener {
-                        Toast.makeText(ctx, "Erro: ${it.message}", Toast.LENGTH_LONG).show()
-                    }
-            }
-            .setNegativeButton("Cancelar", null)
-            .show()
     }
 
     private fun showEditProfileDialog() {

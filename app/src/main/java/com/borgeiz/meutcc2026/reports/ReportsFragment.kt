@@ -858,8 +858,10 @@ class ReportsFragment : Fragment() {
                 textColor = axisTextColor
                 xEntrySpace = 24f
                 formToTextSpace = 8f
-                yOffset = 12f
+                yOffset = 8f
             }
+            // Espaço extra entre os nomes dos meses e a legenda de cores.
+            extraBottomOffset = 16f
             // Toque não destaca barra (não há mais resumo para mostrar).
             setHighlightPerTapEnabled(false)
             setBackgroundColor(Color.TRANSPARENT)
