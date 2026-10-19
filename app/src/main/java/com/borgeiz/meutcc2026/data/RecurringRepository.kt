@@ -125,6 +125,9 @@ class RecurringRepository(uid: String) {
         val today = cal.get(Calendar.DAY_OF_MONTH)
         val month = cal.get(Calendar.MONTH) + 1
         val year  = cal.get(Calendar.YEAR)
+        // Último dia do mês atual (28, 29, 30 ou 31). Usado abaixo pra que uma
+        // recorrência no dia 31 caia no dia 30 em abril, no 28 em fevereiro etc.
+        val lastDayOfMonth = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
 
         // addListenerForSingleValueEvent: lê o nó de transações UMA VEZ (diferente
         // de observe(), que fica escutando pra sempre) — faz sentido aqui porque
@@ -152,12 +155,18 @@ class RecurringRepository(uid: String) {
 
                 // forEach percorre cada item recorrente configurado, um de cada vez.
                 items.forEach { recurring ->
-                    // Se o dia configurado pra esse item ainda não chegou este mês
+                    // Dia em que o item cai NESTE mês: o dia configurado, ou o
+                    // último dia do mês se o configurado não existir nele (ex:
+                    // dia 31 em abril vira 30). Sem isso, "today < 31" seria
+                    // sempre verdadeiro em meses curtos e o item nunca seria lançado.
+                    val day = minOf(recurring.dayOfMonth, lastDayOfMonth)
+
+                    // Se o dia desse item ainda não chegou este mês
                     // (ex: hoje é dia 5 e o salário cai no dia 10), pula ele —
                     // "return@forEach" sai só dessa iteração do loop, não da
                     // função inteira (o rótulo @forEach identifica qual bloco
                     // estamos "retornando").
-                    if (today < recurring.dayOfMonth) return@forEach
+                    if (today < day) return@forEach
 
                     // Monta a data que ESSE lançamento deveria ter, no formato
                     // "yyyy-MM-dd" — "%04d-%02d-%02d" são máscaras de formatação:
@@ -166,7 +175,7 @@ class RecurringRepository(uid: String) {
                     // dígitos (ex: mês 3 -> "03", dia 5 -> "05"). É o que garante
                     // o formato sempre igual, essencial pra comparação de texto
                     // funcionar em outros lugares do app.
-                    val expectedDate = "%04d-%02d-%02d".format(year, month, recurring.dayOfMonth)
+                    val expectedDate = "%04d-%02d-%02d".format(year, month, day)
 
                     // AQUI é a checagem de duplicidade: monta o mesmo tipo de par
                     // (id, data) que foi montado no Set "existing" acima, e testa
