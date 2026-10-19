@@ -65,15 +65,31 @@ class TransactionNotifier(context: Context, private val uid: String) {
                     )
                 }
             }
-            changed.forEach { t ->
+            // Mesma ideia pra alterações e exclusões em massa (ex: "Simular ano
+            // completo" troca todos os lançamentos de uma vez).
+            if (changed.size > 3) {
                 NotificationHelper.notifyTransaction(
-                    appContext, t.id.hashCode(), "Lançamento atualizado", describe(t)
+                    appContext, "changed_batch".hashCode(),
+                    "${changed.size} lançamentos atualizados", ""
                 )
+            } else {
+                changed.forEach { t ->
+                    NotificationHelper.notifyTransaction(
+                        appContext, t.id.hashCode(), "Lançamento atualizado", describe(t)
+                    )
+                }
             }
-            removed.forEach { t ->
+            if (removed.size > 3) {
                 NotificationHelper.notifyTransaction(
-                    appContext, t.id.hashCode(), "Lançamento excluído", describe(t)
+                    appContext, "removed_batch".hashCode(),
+                    "${removed.size} lançamentos excluídos", ""
                 )
+            } else {
+                removed.forEach { t ->
+                    NotificationHelper.notifyTransaction(
+                        appContext, t.id.hashCode(), "Lançamento excluído", describe(t)
+                    )
+                }
             }
         }
 
