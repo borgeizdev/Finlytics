@@ -475,9 +475,10 @@ class ProfileFragment : Fragment() {
     // adicionar/remover linhas (salário, Netflix, aluguel...) e salvar. Cada linha
     // guarda título, categoria, valor e dia do mês. Ao salvar, RecurringRepository
     // grava tudo em users/{uid}/recurringConfig e, se deu certo, chama
-    // checkAndPostIfNeeded imediatamente — então se você acabou de cadastrar um item
-    // cujo dia já passou este mês, ele já lança a transação na hora, sem esperar o
-    // app reabrir.
+    // checkAndPostIfNeeded imediatamente — então um item cadastrado para hoje já é
+    // lançado na hora, sem esperar o app reabrir. Um item cujo dia já passou este
+    // mês NÃO é lançado retroativamente (ver RecurringItem.startDate): começa no
+    // mês seguinte.
     private fun showRecurringTypeDialog(uid: String, type: String) {
         val ctx = requireContext()
         val recurringRepo = RecurringRepository(uid)
@@ -595,12 +596,15 @@ class ProfileFragment : Fragment() {
         val container = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         root.addView(container)
 
+        // original = item como veio do banco (null numa linha nova), usado ao salvar
+        // para decidir se a recorrência mantém o startDate ou passa a valer de hoje.
         data class RowRefs(
             val id: String,
             val etTitle: EditText,
             val etCategory: AutoCompleteTextView,
             val etAmount: EditText,
-            val etDay: EditText
+            val etDay: EditText,
+            val original: RecurringItem?
         )
 
         // Categorias salvas em Perfil > Configurações > Categorias, carregadas de forma
@@ -713,12 +717,18 @@ class ProfileFragment : Fragment() {
 
             row.addView(topRow)
             row.addView(bottomRow)
-            row.tag = RowRefs(rowId, etTitle, etCategory, etAmount, etDay)
+            row.tag = RowRefs(rowId, etTitle, etCategory, etAmount, etDay, item)
             container.addView(row)
         }
 
         fun collectEntries(): List<RecurringItem>? {
             val result = mutableListOf<RecurringItem>()
+            val cal = java.util.Calendar.getInstance()
+            val today = "%04d-%02d-%02d".format(
+                cal.get(java.util.Calendar.YEAR),
+                cal.get(java.util.Calendar.MONTH) + 1,
+                cal.get(java.util.Calendar.DAY_OF_MONTH)
+            )
             for (i in 0 until container.childCount) {
                 val refs = container.getChildAt(i).tag as? RowRefs ?: continue
 
@@ -738,6 +748,17 @@ class ProfileFragment : Fragment() {
                 if (day == null || day !in 1..31) { refs.etDay.error = "1 a 31"; return null }
                 refs.etDay.error = null
 
+                // Linha nova, dia trocado ou item antigo ainda sem data de início:
+                // passa a valer de hoje (um dia que já passou neste mês só é lançado
+                // a partir do mês seguinte). Item antigo é seguro de marcar aqui
+                // porque o que já estava vencido foi lançado ao abrir o app
+                // (MainActivity), antes de o usuário chegar nesta tela. Sem mudança
+                // no dia, mantém a data de início que já estava salva.
+                val original = refs.original
+                val startDate =
+                    if (original == null || original.dayOfMonth != day || original.startDate.isBlank()) today
+                    else original.startDate
+
                 result.add(
                     RecurringItem(
                         id = refs.id,
@@ -745,7 +766,8 @@ class ProfileFragment : Fragment() {
                         type = type,
                         amount = amount,
                         category = category,
-                        dayOfMonth = day
+                        dayOfMonth = day,
+                        startDate = startDate
                     )
                 )
             }

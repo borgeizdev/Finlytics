@@ -9,7 +9,12 @@ data class RecurringItem(
     var type: String = "",
     var amount: Double = 0.0,
     var category: String = "",
-    var dayOfMonth: Int = 1
+    var dayOfMonth: Int = 1,
+    // "yyyy-MM-dd" de quando a recorrência passou a valer (cadastro, ou última
+    // troca do dia). Nenhum lançamento é gerado para datas anteriores a ela: quem
+    // cadastra no dia 19 uma recorrência do dia 5 só recebe a partir do mês
+    // seguinte. Vazio em itens antigos (salvos antes deste campo existir) = sem limite.
+    var startDate: String = ""
 )
 
 data class RecurringConfig(

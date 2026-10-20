@@ -101,8 +101,8 @@ class RecurringRepository(uid: String) {
 
     /**
      * Lança as transações pendentes do mês atual, uma por item recorrente
-     * cujo dia já chegou e que ainda não tenha lançamento no mês
-     * (identificado pelo par recurringId + data esperada).
+     * cujo dia já chegou, que já estava cadastrado nessa data (startDate) e que
+     * ainda não tenha lançamento no mês (identificado pelo par recurringId + mês).
      */
     // ==========================================================================
     // checkAndPostIfNeeded() — o "motor" da recorrência, linha a linha
@@ -146,11 +146,15 @@ class RecurringRepository(uid: String) {
                     // manuais não entram nessa checagem).
                     .filter { it.recurringId.isNotBlank() }
                     // (3) transforma cada Transaction num PAR (Pair) de
-                    // (recurringId, data) — "it.recurringId to it.date" cria esse
-                    // par usando a função infixa "to" do Kotlin — e .toSet() joga
-                    // tudo num Set (conjunto sem repetição), que permite checar
-                    // "isso já existe?" de forma muito rápida.
-                    .map { it.recurringId to it.date }
+                    // (recurringId, mês) — "it.recurringId to ..." cria esse par
+                    // usando a função infixa "to" do Kotlin; take(7) corta a data
+                    // "yyyy-MM-dd" em "yyyy-MM" (só ano e mês). É pelo MÊS, e não
+                    // pela data exata, para cada recorrência lançar no máximo uma
+                    // vez por mês: se o usuário troca o dia de 5 para 25 depois do
+                    // dia 5 já ter sido lançado, o dia 25 não lança de novo no
+                    // mesmo mês. .toSet() joga tudo num Set (conjunto sem
+                    // repetição), que permite checar "isso já existe?" muito rápido.
+                    .map { it.recurringId to it.date.take(7) }
                     .toSet()
 
                 // forEach percorre cada item recorrente configurado, um de cada vez.
@@ -177,11 +181,20 @@ class RecurringRepository(uid: String) {
                     // funcionar em outros lugares do app.
                     val expectedDate = "%04d-%02d-%02d".format(year, month, day)
 
+                    // Se a recorrência foi cadastrada DEPOIS dessa data (ex: hoje é
+                    // 19/10 e acabei de cadastrar uma do dia 5), o dia 5 deste mês já
+                    // tinha passado quando ela passou a existir — não lança
+                    // retroativo, o primeiro lançamento fica para o mês seguinte.
+                    // Comparar como texto funciona porque as duas datas estão em
+                    // "yyyy-MM-dd". Itens antigos sem startDate não têm esse limite.
+                    if (recurring.startDate.isNotBlank() && expectedDate < recurring.startDate) return@forEach
+
                     // AQUI é a checagem de duplicidade: monta o mesmo tipo de par
-                    // (id, data) que foi montado no Set "existing" acima, e testa
-                    // se ele já está lá dentro com o operador "in". Se já existe,
-                    // pula esse item — não lança de novo.
-                    if ((recurring.id to expectedDate) in existing) return@forEach
+                    // (id, mês) que foi montado no Set "existing" acima, e testa
+                    // se ele já está lá dentro com o operador "in". Se essa
+                    // recorrência já lançou neste mês (em qualquer dia), pula —
+                    // não lança de novo.
+                    if ((recurring.id to expectedDate.take(7)) in existing) return@forEach
 
                     // Gera uma chave nova pra essa transação (mesmo mecanismo do
                     // cadastro manual, ver AddTransactionFragment).
