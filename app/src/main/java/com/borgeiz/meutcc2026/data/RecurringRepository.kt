@@ -116,6 +116,7 @@ class RecurringRepository(uid: String) {
                         title = recurring.title,
                         amount = recurring.amount,
                         category = recurring.category,
+                        paymentMethod = if (recurring.type == "receita") "" else recurring.paymentMethod,
                         date = expectedDate,
                         description = "Lançamento automático",
                         recurringId = recurring.id

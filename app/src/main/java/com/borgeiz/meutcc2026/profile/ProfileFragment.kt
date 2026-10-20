@@ -20,6 +20,7 @@ import com.borgeiz.meutcc2026.data.RecurringRepository
 import com.borgeiz.meutcc2026.model.CategoryConfig
 import com.borgeiz.meutcc2026.model.Goal
 import com.borgeiz.meutcc2026.model.GoalConfig
+import com.borgeiz.meutcc2026.model.PaymentMethods
 import com.borgeiz.meutcc2026.model.RecurringConfig
 import com.borgeiz.meutcc2026.model.RecurringItem
 import com.borgeiz.meutcc2026.util.parseAmountPtBr
@@ -579,6 +580,7 @@ class ProfileFragment : Fragment() {
             val etCategory: AutoCompleteTextView,
             val etAmount: EditText,
             val etDay: EditText,
+            val etPayment: AutoCompleteTextView?,
             val original: RecurringItem?
         )
 
@@ -686,9 +688,27 @@ class ProfileFragment : Fragment() {
             bottomRow.addView(etAmount)
             bottomRow.addView(etDay)
 
+            val etPayment = if (type == "receita") null else AutoCompleteTextView(ctx).apply {
+                hint = "Forma de pagamento"
+                setText(item?.paymentMethod?.takeIf { it.isNotBlank() } ?: PaymentMethods.ALL[0], false)
+                inputType = android.text.InputType.TYPE_NULL
+                isSingleLine = true
+                setHintTextColor(ctx.getColor(R.color.text_hint))
+                setTextColor(ctx.getColor(R.color.text_heading))
+                background = androidx.core.content.ContextCompat.getDrawable(ctx, R.drawable.bg_outlined_input)
+                setPadding(dpToPx(12), dpToPx(14), dpToPx(12), dpToPx(14))
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+                ).also { it.topMargin = dpToPx(8) }
+                setAdapter(ArrayAdapter(ctx, android.R.layout.simple_dropdown_item_1line, PaymentMethods.ALL))
+                setOnClickListener { showDropDown() }
+                setOnFocusChangeListener { v, hasFocus -> if (hasFocus) (v as AutoCompleteTextView).showDropDown() }
+            }
+
             row.addView(topRow)
             row.addView(bottomRow)
-            row.tag = RowRefs(rowId, etTitle, etCategory, etAmount, etDay, item)
+            etPayment?.let { row.addView(it) }
+            row.tag = RowRefs(rowId, etTitle, etCategory, etAmount, etDay, etPayment, item)
             container.addView(row)
         }
 
@@ -731,6 +751,7 @@ class ProfileFragment : Fragment() {
                         type = type,
                         amount = amount,
                         category = category,
+                        paymentMethod = refs.etPayment?.text?.toString()?.trim().orEmpty(),
                         dayOfMonth = day,
                         startDate = startDate
                     )

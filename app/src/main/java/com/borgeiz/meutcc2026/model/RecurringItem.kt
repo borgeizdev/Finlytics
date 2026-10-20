@@ -6,6 +6,7 @@ data class RecurringItem(
     var type: String = "",
     var amount: Double = 0.0,
     var category: String = "",
+    var paymentMethod: String = "",
     var dayOfMonth: Int = 1,
     var startDate: String = ""
 )
