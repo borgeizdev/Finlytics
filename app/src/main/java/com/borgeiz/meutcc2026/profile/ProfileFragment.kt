@@ -15,6 +15,7 @@ import androidx.fragment.app.Fragment
 import com.borgeiz.meutcc2026.auth.LoginActivity
 import com.borgeiz.meutcc2026.data.CategoryRenames
 import com.borgeiz.meutcc2026.data.CategoryRepository
+import com.borgeiz.meutcc2026.data.DemoDataSeeder
 import com.borgeiz.meutcc2026.data.GoalRepository
 import com.borgeiz.meutcc2026.data.RecurringRepository
 import com.borgeiz.meutcc2026.model.CategoryConfig
@@ -115,7 +116,8 @@ class ProfileFragment : Fragment() {
             MenuItem(R.drawable.ic_palette,   R.color.primary, R.color.settings_badge_display, "Configurações de exibição", "Tema claro, escuro ou sistema"),
             MenuItem(R.drawable.ic_wallet,    R.color.income,  R.color.settings_badge_salary,  "Recorrências",               "Salário, assinaturas e contas fixas"),
             MenuItem(R.drawable.ic_tag,       R.color.primary, R.color.settings_badge_category, "Categorias",                "Receita, despesa e formas de pagamento"),
-            MenuItem(R.drawable.ic_bar_chart, R.color.primary, R.color.settings_badge_goal,     "Metas",                     "Limites de gasto mensais")
+            MenuItem(R.drawable.ic_bar_chart, R.color.primary, R.color.settings_badge_goal,     "Metas",                     "Limites de gasto mensais"),
+            MenuItem(R.drawable.ic_bar_chart, R.color.primary, R.color.settings_badge_display,  "Simular dados do ano",      "Gerar lançamentos de janeiro até hoje")
         )
 
         val dialog = AlertDialog.Builder(ctx)
@@ -141,6 +143,7 @@ class ProfileFragment : Fragment() {
                         2 -> showRecurringItemsDialog(uid)
                         3 -> showCategoriesDialog(uid)
                         4 -> showGoalsDialog(uid)
+                        5 -> showDemoDataDialog(uid)
                     }
                 }
             }
@@ -213,6 +216,30 @@ class ProfileFragment : Fragment() {
                 cornerRadius = dpToPx(20).toFloat()
             }
         )
+    }
+
+    private fun showDemoDataDialog(uid: String) {
+        val ctx = requireContext()
+
+        AlertDialog.Builder(ctx)
+            .setTitle("Simular dados do ano")
+            .setMessage(
+                "Gera lançamentos fictícios de janeiro até hoje: salário, aluguel, faculdade, " +
+                "contas, mercado, lazer...\n\n" +
+                "Atenção: TODOS os seus lançamentos atuais serão apagados e as recorrências " +
+                "serão substituídas pelas da simulação. Isso não pode ser desfeito."
+            )
+            .setPositiveButton("Apagar e gerar") { _, _ ->
+                DemoDataSeeder(uid).generateUntilToday()
+                    .addOnSuccessListener {
+                        Toast.makeText(ctx, "Simulação gerada!", Toast.LENGTH_SHORT).show()
+                    }
+                    .addOnFailureListener {
+                        Toast.makeText(ctx, "Erro: ${it.message}", Toast.LENGTH_LONG).show()
+                    }
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
     }
 
     private fun showEditProfileDialog() {
