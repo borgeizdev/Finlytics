@@ -70,7 +70,10 @@ class EditTransactionActivity : AppCompatActivity() {
             }
             DatePickerDialog(
                 this,
-                { _, y, m, d -> etDate.setText(formatDateDisplay(y, m + 1, d)) },
+                { _, y, m, d ->
+                    etDate.setText(formatDateDisplay(y, m + 1, d))
+                    etDate.error = null
+                },
                 cal.get(Calendar.YEAR),
                 cal.get(Calendar.MONTH),
                 cal.get(Calendar.DAY_OF_MONTH)
@@ -113,6 +116,12 @@ class EditTransactionActivity : AppCompatActivity() {
             if (titleStr.isEmpty()) { etTitle.error = "Informe o titulo"; return@setOnClickListener }
             val amount = parseAmountPtBr(etAmount.text?.toString())
             if (amount == null || amount <= 0.0) { etAmount.error = "Informe um valor valido"; return@setOnClickListener }
+            val dateStr = toStoredDate(etDate.text?.toString() ?: "")
+            if (dateStr.isEmpty()) {
+                etDate.error = "Informe a data"
+                Toast.makeText(this, "Informe a data", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
 
             val selectedPaymentMethod = spPaymentMethod.selectedItem?.toString() ?: ""
             val transaction = Transaction(
@@ -120,7 +129,7 @@ class EditTransactionActivity : AppCompatActivity() {
                 title       = titleStr,
                 amount      = amount,
                 category    = spCategory.selectedItem?.toString() ?: "",
-                date        = toStoredDate(etDate.text?.toString() ?: ""),
+                date        = dateStr,
                 description = etDescription.text?.toString()?.trim() ?: "",
                 paymentMethod = if (type == "receita" || selectedPaymentMethod == PaymentMethods.NAO_INFORMADO) "" else selectedPaymentMethod
             )

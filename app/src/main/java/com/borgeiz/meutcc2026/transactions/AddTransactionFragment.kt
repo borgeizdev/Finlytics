@@ -78,7 +78,10 @@ class AddTransactionFragment : Fragment() {
             val cal = Calendar.getInstance()
             DatePickerDialog(
                 requireContext(),
-                { _, y, m, d -> etDate.setText(formatDateDisplay(y, m + 1, d)) },
+                { _, y, m, d ->
+                    etDate.setText(formatDateDisplay(y, m + 1, d))
+                    etDate.error = null
+                },
                 cal.get(Calendar.YEAR),
                 cal.get(Calendar.MONTH),
                 cal.get(Calendar.DAY_OF_MONTH)
@@ -102,6 +105,12 @@ class AddTransactionFragment : Fragment() {
 
             val amount = parseAmountPtBr(etAmount.text?.toString())
             if (amount == null || amount <= 0.0) { etAmount.error = "Informe um valor válido"; return@setOnClickListener }
+
+            if (dateStr.isEmpty()) {
+                etDate.error = "Informe a data"
+                Toast.makeText(requireContext(), "Informe a data", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
 
             val typeSnapshot  = selectedType
 
