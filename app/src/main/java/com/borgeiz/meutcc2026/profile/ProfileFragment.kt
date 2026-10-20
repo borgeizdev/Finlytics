@@ -13,6 +13,7 @@ import android.widget.*
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.fragment.app.Fragment
 import com.borgeiz.meutcc2026.auth.LoginActivity
+import com.borgeiz.meutcc2026.data.CategoryRenames
 import com.borgeiz.meutcc2026.data.CategoryRepository
 import com.borgeiz.meutcc2026.data.GoalRepository
 import com.borgeiz.meutcc2026.data.RecurringRepository
@@ -989,7 +990,7 @@ class ProfileFragment : Fragment() {
         btnTabDespesa.setOnClickListener { currentTab = "despesa"; paintTabs() }
         btnTabPagamento.setOnClickListener { currentTab = "pagamento"; paintTabs() }
 
-        data class CategoryRowRefs(val etName: EditText)
+        data class CategoryRowRefs(val etName: EditText, val original: String)
 
         fun addRow(type: String, name: String = "") {
             val container = tabs.getValue(type).second
@@ -1024,39 +1025,48 @@ class ProfileFragment : Fragment() {
 
             row.addView(etName)
             row.addView(btnRemove)
-            row.tag = CategoryRowRefs(etName)
+            row.tag = CategoryRowRefs(etName, name)
             container.addView(row)
         }
 
-        fun collectFrom(container: LinearLayout, result: MutableList<String>): Boolean {
+        fun collectFrom(
+            container: LinearLayout,
+            result: MutableList<String>,
+            renames: MutableMap<String, String>
+        ): Boolean {
             for (i in 0 until container.childCount) {
                 val refs = container.getChildAt(i).tag as? CategoryRowRefs ?: continue
                 val name = refs.etName.text.toString().trim()
                 if (name.isEmpty()) { refs.etName.error = "Informe um nome"; return false }
                 refs.etName.error = null
                 result.add(name)
+                if (refs.original.isNotBlank() && name != refs.original) renames[refs.original] = name
             }
             return true
         }
 
-        fun collectCategories(): CategoryConfig? {
+        fun collectCategories(): Pair<CategoryConfig, CategoryRenames>? {
             val income = mutableListOf<String>()
             val expense = mutableListOf<String>()
             val payment = mutableListOf<String>()
-            if (!collectFrom(containerIncome, income)) return null
-            if (!collectFrom(containerExpense, expense)) return null
-            if (!collectFrom(containerPayment, payment)) return null
+            val incomeRenames = mutableMapOf<String, String>()
+            val expenseRenames = mutableMapOf<String, String>()
+            val paymentRenames = mutableMapOf<String, String>()
+            if (!collectFrom(containerIncome, income, incomeRenames)) return null
+            if (!collectFrom(containerExpense, expense, expenseRenames)) return null
+            if (!collectFrom(containerPayment, payment, paymentRenames)) return null
             if (payment.isEmpty()) {
                 Toast.makeText(ctx, "Adicione pelo menos uma forma de pagamento", Toast.LENGTH_SHORT).show()
                 currentTab = "pagamento"
                 paintTabs()
                 return null
             }
-            return CategoryConfig(
+            val config = CategoryConfig(
                 income = income.distinctBy { it.lowercase() },
                 expense = expense.distinctBy { it.lowercase() },
                 payment = payment.distinctBy { it.lowercase() }
             )
+            return config to CategoryRenames(incomeRenames, expenseRenames, paymentRenames)
         }
 
         btnAddEntry = MaterialButton(ctx).apply {
@@ -1114,13 +1124,17 @@ class ProfileFragment : Fragment() {
         btnAddEntry.setOnClickListener { addRow(currentTab) }
         btnCancel.setOnClickListener { dialog.dismiss() }
         btnSave.setOnClickListener {
-            val config = collectCategories() ?: return@setOnClickListener
-            categoryRepo.saveConfig(config)
+            val (config, renames) = collectCategories() ?: return@setOnClickListener
+            btnSave.isEnabled = false
+            categoryRepo.saveConfig(config, renames)
                 .addOnSuccessListener {
-                    Toast.makeText(ctx, "Categorias e formas de pagamento salvas!", Toast.LENGTH_SHORT).show()
+                    val msg = if (renames.isEmpty()) "Categorias e formas de pagamento salvas!"
+                    else "Categorias salvas e lançamentos atualizados!"
+                    Toast.makeText(ctx, msg, Toast.LENGTH_SHORT).show()
                     dialog.dismiss()
                 }
                 .addOnFailureListener {
+                    btnSave.isEnabled = true
                     Toast.makeText(ctx, "Erro: ${it.message}", Toast.LENGTH_LONG).show()
                 }
         }
