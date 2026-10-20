@@ -26,7 +26,6 @@
         android:orientation="horizontal"
         android:weightSum="5">
 
-        <!-- Home -->
         <LinearLayout
             android:id="@+id/btnDashboard"
             android:layout_width="0dp"
@@ -56,7 +55,6 @@
                 android:textStyle="bold" />
         </LinearLayout>
 
-        <!-- Transações -->
         <LinearLayout
             android:id="@+id/btnTransactions"
             android:layout_width="0dp"
@@ -85,7 +83,6 @@
                 android:textSize="9sp" />
         </LinearLayout>
 
-        <!-- Adicionar (FAB central) -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
@@ -106,7 +103,6 @@
                 app:elevation="4dp" />
         </LinearLayout>
 
-        <!-- Relatórios -->
         <LinearLayout
             android:id="@+id/btnReports"
             android:layout_width="0dp"
@@ -135,7 +131,6 @@
                 android:textSize="9sp" />
         </LinearLayout>
 
-        <!-- Perfil -->
         <LinearLayout
             android:id="@+id/btnProfile"
             android:layout_width="0dp"

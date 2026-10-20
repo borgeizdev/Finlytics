@@ -34,7 +34,6 @@
                 android:orientation="vertical"
                 android:padding="20dp">
 
-                <!-- Título -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -55,7 +54,6 @@
 
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Valor -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -77,7 +75,6 @@
 
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Categoria -->
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -97,7 +94,6 @@
                     android:paddingEnd="14dp"
                     android:layout_marginBottom="16dp" />
 
-                <!-- Forma de pagamento -->
                 <TextView
                     android:id="@+id/tvEditPaymentMethodLabel"
                     android:layout_width="wrap_content"
@@ -118,7 +114,6 @@
                     android:paddingEnd="14dp"
                     android:layout_marginBottom="16dp" />
 
-                <!-- Data -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -142,7 +137,6 @@
 
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Descrição -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -164,7 +158,6 @@
 
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Salvar -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnUpdate"
                     android:layout_width="match_parent"
@@ -182,7 +175,6 @@
                     android:layout_marginBottom="16dp"
                     android:background="#F1F5F9" />
 
-                <!-- Excluir -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnDelete"
                     android:layout_width="match_parent"

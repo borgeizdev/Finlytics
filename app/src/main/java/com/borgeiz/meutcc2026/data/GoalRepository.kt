@@ -8,20 +8,12 @@ import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 
-/**
- * users/{uid}/goals — metas de gasto, gerais ou por categoria, sempre mensais.
- */
+
 class GoalRepository(uid: String) {
 
     private val ref: DatabaseReference = FirebaseDatabase.getInstance().reference
         .child("users").child(uid).child("goals")
 
-    /**
-     * Leitura única, usada pelo diálogo de edição (evita sobrescrever o que o usuário está digitando).
-     * Usa addListenerForSingleValueEvent (lê uma vez e para) em vez de observe():
-     * se ficasse escutando em tempo real enquanto o usuário edita, uma atualização
-     * vinda do servidor poderia sobrescrever o texto no meio da digitação.
-     */
     fun loadConfig(onResult: (GoalConfig) -> Unit) {
         ref.addListenerForSingleValueEvent(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
@@ -33,7 +25,7 @@ class GoalRepository(uid: String) {
         })
     }
 
-    /** Leitura contínua, usada pela tela de progresso em Reports. */
+
     fun observe(onChange: (GoalConfig) -> Unit): ValueEventListener {
         val listener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
@@ -49,7 +41,6 @@ class GoalRepository(uid: String) {
         ref.removeEventListener(listener)
     }
 
-    // Cadastro no banco: sobrescreve o node inteiro users/{uid}/goals com a lista
-    // completa de metas de uma vez (não dá update item por item).
+
     fun saveConfig(config: GoalConfig): Task<Void> = ref.setValue(config)
 }

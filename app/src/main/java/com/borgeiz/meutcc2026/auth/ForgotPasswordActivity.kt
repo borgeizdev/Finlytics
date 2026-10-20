@@ -25,8 +25,7 @@ class ForgotPasswordActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            // Uma linha faz o trabalho todo: o Firebase Auth gera e envia o e-mail
-            // de redefinição por conta própria. O app nunca vê nem manipula senha.
+
             FirebaseAuth.getInstance().sendPasswordResetEmail(email)
                 .addOnSuccessListener {
                     Toast.makeText(this, "Link enviado", Toast.LENGTH_SHORT).show()

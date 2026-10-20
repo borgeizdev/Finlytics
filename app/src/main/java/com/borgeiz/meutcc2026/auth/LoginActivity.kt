@@ -39,14 +39,10 @@ class LoginActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            // signInWithEmailAndPassword é assíncrono e não faz nenhuma validação de
-            // senha no nosso código — tudo acontece do lado do Firebase Auth.
             auth.signInWithEmailAndPassword(email, password)
                 .addOnSuccessListener {
                     startActivity(Intent(this, MainActivity::class.java))
-                    // finish() remove o Login da pilha de navegação: o botão "voltar"
-                    // do Android não pode trazer o usuário de volta pro login depois
-                    // de já ter entrado.
+
                     finish()
                 }
                 .addOnFailureListener {

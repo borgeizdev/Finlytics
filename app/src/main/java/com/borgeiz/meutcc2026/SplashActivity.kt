@@ -31,10 +31,6 @@ class SplashActivity : AppCompatActivity() {
         subtitle.animate().alpha(1f).setStartDelay(450).setDuration(400).start()
         progress.animate().alpha(1f).setStartDelay(650).setDuration(300).start()
 
-        // O Firebase Auth mantém a sessão salva no aparelho, então currentUser não
-        // é nulo se a pessoa já tinha feito login antes — ela cai direto no
-        // Dashboard sem digitar senha de novo. Só vai pro Login quem nunca
-        // autenticou (ou fez logout).
         Handler(Looper.getMainLooper()).postDelayed({
             val user = FirebaseAuth.getInstance().currentUser
             if (user != null) {

@@ -80,7 +80,6 @@ class PaymentMethodReportFragment : Fragment() {
         var allTransactions = listOf<Transaction>()
 
         fun refresh() {
-            // Campos mostram "2026/10/18"; a comparação usa o formato salvo "2026-10-18".
             val start = toStoredDate(etStartDate.text?.toString().orEmpty())
             val end   = toStoredDate(etEndDate.text?.toString().orEmpty())
             val typeFilter = when (spTypeFilter.selectedItemPosition) {

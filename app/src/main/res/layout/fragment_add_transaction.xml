@@ -34,7 +34,6 @@
                 android:orientation="vertical"
                 android:padding="20dp">
 
-                <!-- Toggle Tipo -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="52dp"
@@ -69,7 +68,6 @@
 
                 </LinearLayout>
 
-                <!-- Título -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -90,7 +88,6 @@
 
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Valor -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -112,7 +109,6 @@
 
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Categoria -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilCategory"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
@@ -133,7 +129,6 @@
 
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Forma de pagamento -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:id="@+id/tilPaymentMethod"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
@@ -154,7 +149,6 @@
 
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Data -->
                 <com.google.android.material.textfield.TextInputLayout
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                     android:layout_width="match_parent"
@@ -178,7 +172,6 @@
 
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Descrição -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

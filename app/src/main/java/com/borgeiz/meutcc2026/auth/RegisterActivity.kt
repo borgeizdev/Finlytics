@@ -36,11 +36,6 @@ class RegisterActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            // Cadastro é 2 passos em cascata: (1) cria a conta em si no Firebase
-            // Auth (gera o uid); (2) só se isso deu certo, grava nome/e-mail em
-            // users/{uid}/profile no Realtime Database. São dois produtos Firebase
-            // diferentes — Auth cuida de "quem é o usuário", Database cuida de
-            // "quais dados esse usuário tem" — por isso são chamadas separadas.
             auth.createUserWithEmailAndPassword(email, password)
                 .addOnSuccessListener {
                     val uid = auth.currentUser!!.uid
@@ -48,8 +43,7 @@ class RegisterActivity : AppCompatActivity() {
                         "name" to name,
                         "email" to email
                     )
-                    // Se isso falhar (ex: perda de conexão), a conta já existe mas
-                    // sem nome salvo — avisamos o usuário em vez de travar o app.
+
                     db.child("users").child(uid).child("profile").setValue(profile)
                         .addOnSuccessListener {
                             Toast.makeText(this, "Conta criada com sucesso", Toast.LENGTH_SHORT).show()

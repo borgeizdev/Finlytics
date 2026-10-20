@@ -228,9 +228,9 @@ class DashboardFragment : Fragment() {
         val arrow  = if (isUp) "▲" else if (isDown) "▼" else "—"
 
         val colorRes = when {
-            !isUp && !isDown -> R.color.text_hint   // variação insignificante: cor neutra
-            isUp == upIsGood -> R.color.income      // "subiu" e isso é bom -> verde
-            else             -> R.color.expense     // ou "desceu quando bom seria subir", ou "subiu quando ruim é subir" -> vermelho
+            !isUp && !isDown -> R.color.text_hint
+            isUp == upIsGood -> R.color.income
+            else             -> R.color.expense
         }
 
         target.text = "$arrow ${"%.0f".format(kotlin.math.abs(pct))}% em relação ao mês passado"

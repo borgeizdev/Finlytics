@@ -27,11 +27,6 @@ fun isDarkMode(context: Context): Boolean {
             android.content.res.Configuration.UI_MODE_NIGHT_YES
 }
 
-// Recebe um Map<String, Double> pronto (de categorias ou de formas de pagamento —
-// esta função não sabe nem precisa saber qual dos dois) e desenha uma linha por
-// entrada (bolinha colorida + nome + valor + barra), ordenada da maior pra menor.
-// Reaproveitada por ReportsFragment (gastos por categoria) e
-// PaymentMethodReportFragment (análise por forma de pagamento).
 fun buildBreakdownRows(
     context: Context,
     isDark: Boolean,
@@ -52,9 +47,6 @@ fun buildBreakdownRows(
 
     sorted.forEachIndexed { idx, (label, value) ->
         val pct    = if (total > 0) (value / total * 100.0) else 0.0
-        // chartPaletteHex tem um tamanho fixo de cores; "% chartPaletteHex.size" faz
-        // o índice "dar a volta" e repetir cores se tiver mais categorias que cores
-        // disponíveis, em vez de quebrar com índice fora do array.
         val color  = Color.parseColor(chartPaletteHex[idx % chartPaletteHex.size])
         val pctStr = if (pct < 1.0 && pct > 0.0) "${formatPercentPtBr(pct)}%" else "${pct.toInt()}%"
         val isLast = idx == sorted.size - 1
@@ -142,7 +134,6 @@ fun buildBreakdownRows(
         val fill = View(ctx).apply {
             layoutParams = LinearLayout.LayoutParams(
                 0, LinearLayout.LayoutParams.MATCH_PARENT,
-                // Mínimo de 3 para a barrinha de um gasto pequeno ainda aparecer.
                 pct.toFloat().coerceAtLeast(3f)
             )
             background = GradientDrawable().apply {
@@ -193,9 +184,6 @@ fun setupBreakdownPieChart(
         .sortedByDescending { it.value }
         .map { (label, value) -> PieEntry(value.toFloat(), label) }
 
-    // Percentuais desenhados FORA da pizza, na direção de cada fatia, por
-    // RadialLabelPieRenderer: dentro de uma fatia pequena (ex: 1%) o texto não
-    // cabia e ficava ilegível.
     val labelColor = if (isDark) Color.parseColor("#CBD5E1") else Color.parseColor("#334155")
     val dataSet = PieDataSet(entries, "").apply {
         this.colors = colors.take(entries.size).toMutableList()
@@ -208,10 +196,6 @@ fun setupBreakdownPieChart(
         }
         sliceSpace = 2f
     }
-    // setUsePercentValues(true) abaixo faz a própria biblioteca MPAndroidChart
-    // calcular o percentual de cada fatia a partir dos valores absolutos — o app
-    // não precisa calcular isso na mão pro gráfico (só pra lista de baixo, que usa
-    // seu próprio "pct" em buildBreakdownRows).
 
     val holeColor = if (isDark) Color.parseColor("#1E293B") else Color.WHITE
 
@@ -226,15 +210,9 @@ fun setupBreakdownPieChart(
         setEntryLabelColor(Color.TRANSPARENT)
         setDrawEntryLabels(false)
         legend.isEnabled = false
-        // Toda fatia ocupa pelo menos 12° do círculo, mesmo que o gasto seja
-        // minúsculo perto dos outros — senão ela vira um risco invisível. (O valor
-        // e o percentual reais continuam corretos no texto e na lista abaixo.)
         minAngleForSlices = 14f
-        // Espaço em volta da pizza (em dp) para os percentuais de fora caberem
-        // sem serem cortados: mais nas laterais, onde o texto cresce para os lados.
         setExtraOffsets(30f, 18f, 30f, 18f)
         renderer = RadialLabelPieRenderer(this, labelColor, context.resources.displayMetrics.density)
-        // Sem girar a pizza com o dedo.
         isRotationEnabled = false
         animateY(800)
         invalidate()

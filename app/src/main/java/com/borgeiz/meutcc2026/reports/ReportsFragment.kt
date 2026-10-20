@@ -45,11 +45,7 @@ import java.util.Calendar
 class ReportsFragment : Fragment() {
 
     companion object {
-        // Em memória (não persiste no disco): mantém a seleção do usuário ao navegar
-        // entre abas durante a sessão, mas volta pro padrão "Todos" quando
-        // o processo do app morre e é reaberto.
         private var lastCatMonthSelection = 0
-        // Detalhamento de "Gastos por categoria" aberto ou recolhido (seta).
         private var catBreakdownExpanded = true
     }
 
@@ -127,8 +123,6 @@ class ReportsFragment : Fragment() {
                 .commit()
         }
 
-        // getView é o item exibido no próprio spinner fechado: centraliza o texto
-        // ("Todos", "Março"...) dentro da caixa.
         spCatMonth.adapter = object : ArrayAdapter<String>(
             requireContext(),
             android.R.layout.simple_spinner_dropdown_item,
@@ -146,7 +140,6 @@ class ReportsFragment : Fragment() {
         pieChart.setNoDataText("")
         barChart.setNoDataText("")
 
-        // Seta do detalhamento por categoria: para baixo = aberto, gira -90° = recolhido.
         fun paintCatToggle(animate: Boolean) {
             llCatBreakdown.visibility = if (catBreakdownExpanded) View.VISIBLE else View.GONE
             val rotation = if (catBreakdownExpanded) 0f else -90f
@@ -168,11 +161,6 @@ class ReportsFragment : Fragment() {
         var adjustment = 0.0
         var goals = listOf<Goal>()
 
-        // Gastos por categoria: filtra as despesas pelo mês escolhido no spinner
-        // (monthFilter == 0 significa "todos os meses"), soma manualmente por
-        // categoria num Map, e usa esse Map pra alimentar tanto o gráfico de pizza
-        // quanto a lista com barrinha de progresso logo abaixo dele (ambos vêm de
-        // ChartHelpers.kt, reaproveitados também pela análise por forma de pagamento).
         fun refreshCategoryChart(monthFilter: Int) {
             val expenses = allTransactions.filter { t ->
                 t.type == "despesa" && (monthFilter == 0 || run {
@@ -189,8 +177,6 @@ class ReportsFragment : Fragment() {
                 categoryTotals[cat] = (categoryTotals[cat] ?: 0.0) + t.amount
             }
 
-            // Sem despesa no período não há o que recolher: esconde a seta e deixa
-            // a mensagem de "nenhuma despesa" sempre visível.
             llCatToggle.visibility = if (categoryTotals.isEmpty()) View.GONE else View.VISIBLE
             if (categoryTotals.isEmpty()) llCatBreakdown.visibility = View.VISIBLE
             else paintCatToggle(animate = false)
@@ -216,14 +202,6 @@ class ReportsFragment : Fragment() {
             return parts.size >= 2 && parts[0].toIntOrNull() == year && parts[1].toIntOrNull() == month
         }
 
-        // "Insights": bloco que calcula tudo que aparece na parte de análise dos
-        // Relatórios num só lugar — sempre comparando o mês atual (curXxx) com o
-        // mês anterior (prevXxx), calculados a partir de allTransactions em memória
-        // (nada disso é uma nova consulta ao Firebase). Dentro dela:
-        //   • média diária e maior receita/despesa do mês
-        //   • "hero": variação percentual do total de despesas vs. mês passado
-        //   • variação por categoria (delega para buildCategoryVariationRows)
-        //   • gasto por dia da semana (delega para setupWeekdayChart)
         fun refreshInsights() {
             if (!isAdded) return
             val ctx = requireContext()
@@ -244,7 +222,6 @@ class ReportsFragment : Fragment() {
             val curTotal  = curExpenses.sumOf { it.amount }
             val prevTotal = prevExpenses.sumOf { it.amount }
 
-            // Média diária e maiores lançamentos
             tvAvgPerDay.text = formatMoneyPtBr(if (today > 0) curTotal / today else 0.0)
 
             val topExpense = curExpenses.maxByOrNull { it.amount }
@@ -255,7 +232,6 @@ class ReportsFragment : Fragment() {
             tvTopIncomeValue.text = topIncome?.let { formatMoneyPtBr(it.amount) } ?: "—"
             tvTopIncomeTitle.text = topIncome?.title?.ifBlank { "Sem título" } ?: "Nenhuma receita"
 
-            // Hero: variação total do mês
             val prevMonthName = monthLabelsFull.getOrElse(prevMonth) { "" }
             if (prevTotal <= 0.0) {
                 tvHeroBadge.visibility = View.GONE
@@ -284,19 +260,12 @@ class ReportsFragment : Fragment() {
                     "Você gastou ${formatMoneyPtBr(diff)} $comparativo que em $prevMonthName (${formatMoneyPtBr(prevTotal)})"
             }
 
-            // Variação por categoria
             val curCat  = curExpenses.groupBy { it.category.ifBlank { "Outros" } }.mapValues { (_, v) -> v.sumOf { it.amount } }
             val prevCat = prevExpenses.groupBy { it.category.ifBlank { "Outros" } }.mapValues { (_, v) -> v.sumOf { it.amount } }
-            // Junta as categorias dos dois meses sem repetir (é um Set) — importante
-            // porque uma categoria pode existir num mês e não no outro.
             val allCats = curCat.keys + prevCat.keys
             val deltas = allCats.map { cat ->
                 val cur  = curCat[cat] ?: 0.0
                 val prev = prevCat[cat] ?: 0.0
-                // 3 casos: variação normal quando existia no mês passado; 100% fixo
-                // quando é uma categoria totalmente nova (não dá pra calcular
-                // "variação" de um valor que não existia); 0% quando não teve gasto
-                // em nenhum dos dois meses.
                 val pct = when {
                     prev > 0.0 -> (cur - prev) / prev * 100.0
                     cur > 0.0  -> 100.0
@@ -306,7 +275,6 @@ class ReportsFragment : Fragment() {
             }.sortedByDescending { it.pct }.take(6)
             buildCategoryVariationRows(llCategoryVariation, deltas)
 
-            // Dia da semana com mais gasto
             if (curExpenses.isEmpty()) {
                 weekdayChart.visibility = View.GONE
                 tvWeekdayEmpty.visibility = View.VISIBLE
@@ -317,11 +285,6 @@ class ReportsFragment : Fragment() {
             }
         }
 
-        // Metas do mês: recalcula o gasto (por categoria e geral) e o lucro do mês
-        // atual a partir de allTransactions, e repassa pra buildGoalsProgress, que
-        // desenha uma barra de progresso por meta configurada em Perfil > Metas.
-        // Roda tanto quando as transações mudam quanto quando a config de metas
-        // muda (dois listeners diferentes, mesma função — ver onCreateView abaixo).
         fun refreshGoalsProgress() {
             if (!isAdded) return
             val cal = Calendar.getInstance()
@@ -382,10 +345,6 @@ class ReportsFragment : Fragment() {
         return view
     }
 
-    // Desenha a lista "variação por categoria" (bolinha colorida + nome + valores +
-    // seta de %). Os deltas já vêm prontos de refreshInsights: para cada categoria,
-    // pct é (atual - anterior) / anterior * 100 — ou 100% se a categoria não existia
-    // no mês passado — ordenados do maior aumento pro menor, limitado às 6 primeiras.
     private fun buildCategoryVariationRows(container: LinearLayout, deltas: List<CategoryDelta>) {
         val ctx = requireContext()
         val dp  = ctx.resources.displayMetrics.density
@@ -471,12 +430,6 @@ class ReportsFragment : Fragment() {
         }
     }
 
-    // Desenha uma barra de progresso por meta (Goal). "current" é o gasto do mês
-    // (por categoria, ou o total geral se a meta não tem categoria) para metas do
-    // tipo "gasto", ou o lucro do mês (receita - despesa) para metas do tipo "lucro".
-    // pct = current / targetAmount * 100. As cores da barra são intencionalmente
-    // opostas entre os dois tipos: numa meta de gasto, 100%+ é vermelho (estourou);
-    // numa meta de lucro, 100%+ é verde (bateu a meta).
     private fun buildGoalsProgress(
         container: LinearLayout,
         goals: List<Goal>,
@@ -500,30 +453,13 @@ class ReportsFragment : Fragment() {
         val isDark = isDarkMode(ctx)
         val trackColor = if (isDark) Color.parseColor("#1E293B") else Color.parseColor("#E2E8F0")
 
-        // forEachIndexed percorre a lista de metas dando também o índice (idx) de
-        // cada uma, junto com a meta em si (goal) — usado só pra saber se é a
-        // última (isLast), pra não desenhar margem extra depois dela.
         goals.forEachIndexed { idx, goal ->
-            // isLucro é um Boolean: true se essa meta específica é do tipo
-            // "lucro", false se é do tipo "gasto".
             val isLucro = goal.type == "lucro"
 
-            // "spent" = quanto já foi gasto no mês relevante pra essa meta. Se a
-            // meta não tem categoria (goal.category vazio), usa o total geral de
-            // despesas (overallExpense). Senão, busca no Map categoryTotals pela
-            // categoria específica — "categoryTotals[goal.category]" pode devolver
-            // null se essa categoria não teve gasto nenhum este mês, por isso o
-            // "?: 0.0" (usa zero nesse caso).
             val spent = if (goal.category.isBlank()) overallExpense else (categoryTotals[goal.category] ?: 0.0)
 
-            // "current" é o valor de fato usado no cálculo de progresso: pra meta
-            // de lucro, é o lucro do mês (monthlyProfit, calculado em
-            // refreshGoalsProgress); pra meta de gasto, é "spent" de cima.
             val current = if (isLucro) monthlyProfit else spent
 
-            // A fórmula central: percentual = valor atual dividido pela meta,
-            // vezes 100. "if (goal.targetAmount > 0)" evita dividir por zero
-            // caso a meta tenha sido salva com valor zero por algum motivo.
             val pct = if (goal.targetAmount > 0) (current / goal.targetAmount * 100.0) else 0.0
 
             val label = if (isLucro) "Lucro mensal" else goal.category.ifBlank { "Geral (todas as despesas)" }
@@ -534,22 +470,13 @@ class ReportsFragment : Fragment() {
             }
             val isLast = idx == goals.size - 1
 
-            // A cor da barra é o ponto mais importante de explicar: é a MESMA
-            // barra visual, mas com a leitura do percentual INVERTIDA conforme o
-            // tipo da meta.
             val barColor = if (isLucro) {
-                // Meta de LUCRO: 100%+ é bom (bateu a meta) -> verde (income).
-                // Entre 50% e 100% -> amarelo/laranja (ainda no caminho).
-                // Abaixo de 50% -> vermelho (longe do objetivo).
                 when {
                     pct >= 100.0 -> ContextCompat.getColor(ctx, R.color.income)
                     pct >= 50.0  -> Color.parseColor("#D97706")
                     else         -> ContextCompat.getColor(ctx, R.color.expense)
                 }
             } else {
-                // Meta de GASTO: 100%+ é ruim (estourou o limite) -> vermelho
-                // (expense). Entre 80% e 100% -> amarelo/laranja (atenção,
-                // chegando perto do limite). Abaixo de 80% -> verde (tranquilo).
                 when {
                     pct >= 100.0 -> ContextCompat.getColor(ctx, R.color.expense)
                     pct >= 80.0  -> Color.parseColor("#D97706")
@@ -641,13 +568,8 @@ class ReportsFragment : Fragment() {
         }
     }
 
-    // Gastos por dia da semana: soma o valor de cada despesa do mês atual no
-    // "balde" (0-6) do dia da semana em que ela aconteceu. A data é guardada como
-    // texto "yyyy-MM-dd", então é reconstruída num Calendar só pra descobrir o dia
-    // da semana (DAY_OF_WEEK do Java começa no domingo=1; "(dow + 5) % 7" reindexa
-    // pra a semana começar na segunda, que é como o gráfico exibe as barras).
     private fun setupWeekdayChart(barChart: BarChart, expenses: List<Transaction>) {
-        val totals = DoubleArray(7) // 0=Seg .. 6=Dom
+        val totals = DoubleArray(7)
         for (t in expenses) {
             val parts = t.date.split("-")
             if (parts.size != 3) continue
@@ -656,7 +578,7 @@ class ReportsFragment : Fragment() {
             val d = parts[2].toIntOrNull() ?: continue
             val c = Calendar.getInstance()
             c.set(y, m - 1, d, 0, 0, 0)
-            val dow = c.get(Calendar.DAY_OF_WEEK) // 1=Dom .. 7=Sáb
+            val dow = c.get(Calendar.DAY_OF_WEEK)
             val idx = (dow + 5) % 7
             totals[idx] += t.amount
         }
@@ -665,9 +587,6 @@ class ReportsFragment : Fragment() {
         val maxIdx = totals.indices.maxByOrNull { totals[it] } ?: -1
 
         val isDark = isDarkMode(requireContext())
-        // Todos os dias ficam coloridos (não só o de maior gasto) para dar pra
-        // comparar as barras entre si; o dia de pico só se destaca com um tom
-        // mais forte, sem apagar os demais em cinza.
         val regularColor = Color.parseColor("#93C5FD")
         val peakColor = Color.parseColor("#2563EB")
         val axisTextColor = if (isDark) Color.parseColor("#94A3B8") else Color.parseColor("#6B7280")
@@ -682,7 +601,6 @@ class ReportsFragment : Fragment() {
             data = BarData(dataSet).apply { barWidth = 0.6f }
             description.isEnabled = false
             legend.isEnabled = false
-            // Sem zoom (pinça ou toque duplo); os 7 dias já cabem na tela.
             setScaleEnabled(false)
             setPinchZoom(false)
             isDoubleTapToZoomEnabled = false
@@ -703,13 +621,7 @@ class ReportsFragment : Fragment() {
         }
     }
 
-    // Gráfico de colunas de receitas x despesas por mês: agrupa TODAS as transações
-    // (não só o mês selecionado) por mês, somando receita e despesa separadamente.
-    // Se só existir um dos dois tipos no período (hasIncome != hasExpense), desenha
-    // uma única coluna por mês em vez de duas, pra não ter uma barra sempre zerada.
     private fun setupBarChart(barChart: BarChart, transactions: List<Transaction>) {
-        // Chave = ano * 100 + mês (ex: 202603), para março de 2025 e março de 2026
-        // não serem somados no mesmo mês.
         val monthlyIncome  = mutableMapOf<Int, Float>()
         val monthlyExpense = mutableMapOf<Int, Float>()
 
@@ -730,7 +642,6 @@ class ReportsFragment : Fragment() {
         }
         barChart.visibility = View.VISIBLE
 
-        // Com mais de um ano no gráfico, o rótulo leva o ano junto (ex: "Mar/26").
         val multiYear = allMonths.map { it / 100 }.distinct().size > 1
         val labels = allMonths.map { key ->
             val name = monthLabels.getOrElse(key % 100) { "${key % 100}" }
@@ -743,25 +654,17 @@ class ReportsFragment : Fragment() {
         val axisTextColor = if (isDark) Color.parseColor("#94A3B8") else Color.parseColor("#6B7280")
         val axisGridColor = if (isDark) Color.parseColor("#2D3748") else Color.parseColor("#E5E7EB")
 
-        // Rótulos bem curtos em cima das barras ("950", "1,2k", "3,4M"), sem "R$":
-        // com receita e despesa lado a lado, rótulos longos se encostavam.
         fun hideZeroFormatter() = object : com.github.mikephil.charting.formatter.ValueFormatter() {
             override fun getFormattedValue(value: Float) = if (value == 0f) "" else formatBarLabel(value)
         }
 
-        // Só receita ou só despesa têm dados no período todo: em vez de um grupo de
-        // 2 colunas com uma delas sempre zerada (e descentralizada), desenha uma
-        // única coluna por mês, centralizada sob o próprio mês.
         val hasIncome  = monthlyIncome.values.any { it > 0f }
         val hasExpense = monthlyExpense.values.any { it > 0f }
         val singleSeries = hasIncome != hasExpense
 
-        // barSpace maior separa a barra de receita da de despesa, abrindo espaço
-        // entre os rótulos de valor das duas.
         val groupSpace = 0.24f
         val barSpace   = 0.1f
         val barWidth   = if (singleSeries) 0.5f else 0.28f
-        // Largura que cada mês ocupa no eixo X.
         val slotWidth  = if (singleSeries) 1f else barWidth * 2 + barSpace * 2 + groupSpace
 
         if (singleSeries) {
@@ -803,9 +706,6 @@ class ReportsFragment : Fragment() {
             barData.groupBars(0f, groupSpace, barSpace)
         }
 
-        // Poucos meses na tela de uma vez (4 com receita+despesa, 6 com uma série
-        // só); o resto fica acessível arrastando para os lados. Antes, um ano
-        // inteiro (24 barras) dividia 280dp e os valores ficavam encavalados.
         val maxVisibleMonths = if (singleSeries) 6 else 4
 
         barChart.apply {
@@ -833,8 +733,6 @@ class ReportsFragment : Fragment() {
                 } else {
                     setCenterAxisLabels(true)
                     if (allMonths.size == 1) {
-                        // Um único mês: soma um espaço vazio simétrico dos dois lados do
-                        // grupo pra ele ficar centralizado em vez de colado na borda.
                         axisMinimum = -slotWidth
                         axisMaximum = slotWidth * 2
                     } else {
@@ -845,7 +743,6 @@ class ReportsFragment : Fragment() {
             }
             axisLeft.apply {
                 axisMinimum = 0f
-                // Espaço acima da barra mais alta para o rótulo de valor não ser cortado.
                 spaceTop = 18f
                 textColor = axisTextColor
                 gridColor = axisGridColor
@@ -860,15 +757,12 @@ class ReportsFragment : Fragment() {
                 formToTextSpace = 8f
                 yOffset = 8f
             }
-            // Espaço extra entre os nomes dos meses e a legenda de cores.
             extraBottomOffset = 16f
-            // Toque não destaca barra (não há mais resumo para mostrar).
             setHighlightPerTapEnabled(false)
             setBackgroundColor(Color.TRANSPARENT)
             notifyDataSetChanged()
             if (allMonths.size > maxVisibleMonths) {
                 setVisibleXRangeMaximum(slotWidth * maxVisibleMonths)
-                // Abre mostrando os meses mais recentes (o fim do eixo).
                 moveViewToX(xAxis.axisMaximum)
             }
             animateY(600)
@@ -876,7 +770,6 @@ class ReportsFragment : Fragment() {
         }
     }
 
-    /** Rótulo curto de barra: "950", "1,2k", "3,4M". */
     private fun formatBarLabel(value: Float): String {
         val v = value.toDouble()
         return when {
@@ -886,7 +779,6 @@ class ReportsFragment : Fragment() {
         }
     }
 
-    /** Valor abreviado para rótulos de gráfico: "R$950", "R$1,2 mil", "R$3,4 mi". */
     private fun formatCompactMoney(value: Float): String {
         val v = value.toDouble()
         return when {
@@ -896,7 +788,6 @@ class ReportsFragment : Fragment() {
         }
     }
 
-    /** Uma casa decimal com vírgula, sem ",0" no fim (ex: 1.25 -> "1,3", 12.0 -> "12"). */
     private fun formatOneDecimal(v: Double): String {
         val rounded = Math.round(v * 10) / 10.0
         return if (rounded % 1.0 == 0.0) formatIntegerPtBr(rounded)

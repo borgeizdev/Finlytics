@@ -50,7 +50,6 @@
             app:iconGravity="textStart"
             app:strokeColor="@color/border" />
 
-        <!-- Card Receitas -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -82,7 +81,6 @@
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- Card Despesas -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -114,7 +112,6 @@
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- Card Saldo -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -146,7 +143,6 @@
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- Card Gastos por categoria + breakdown (legenda integrada) -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -160,7 +156,6 @@
                 android:orientation="vertical"
                 android:padding="18dp">
 
-                <!-- Título + filtro de mês -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -187,13 +182,11 @@
 
                 </LinearLayout>
 
-                <!-- Gráfico de pizza (sem legenda) -->
                 <com.github.mikephil.charting.charts.PieChart
                     android:id="@+id/pieChart"
                     android:layout_width="match_parent"
                     android:layout_height="310dp" />
 
-                <!-- Divisor entre gráfico e detalhamento -->
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
@@ -201,7 +194,6 @@
                     android:layout_marginBottom="16dp"
                     android:background="@color/divider" />
 
-                <!-- Cabeçalho que recolhe/mostra o detalhamento -->
                 <LinearLayout
                     android:id="@+id/llCatToggle"
                     android:layout_width="match_parent"
@@ -233,7 +225,6 @@
                         app:tint="@color/text_secondary" />
                 </LinearLayout>
 
-                <!-- Detalhamento por categoria (serve como legenda) -->
                 <LinearLayout
                     android:id="@+id/llCatBreakdown"
                     android:layout_width="match_parent"
@@ -244,7 +235,6 @@
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- Card Gráfico de Colunas Mensal -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -272,7 +262,6 @@
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- Card Metas do mês -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -304,7 +293,6 @@
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- Seção Insights -->
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -323,7 +311,6 @@
             android:textSize="12sp"
             android:layout_marginBottom="12dp" />
 
-        <!-- Estatísticas rápidas -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -447,7 +434,6 @@
             </androidx.cardview.widget.CardView>
         </LinearLayout>
 
-        <!-- Hero: variação total do mês -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -507,7 +493,6 @@
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- Variação por categoria -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -539,7 +524,6 @@
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- Dia da semana com mais gasto -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

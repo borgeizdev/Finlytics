@@ -8,25 +8,12 @@ import com.borgeiz.meutcc2026.model.Transaction
 import com.borgeiz.meutcc2026.util.formatMoneyPtBr
 import com.google.firebase.database.ValueEventListener
 
-/**
- * Observa users/{uid}/transactions enquanto o app está aberto (MainActivity) e
- * dispara notificações comparando cada nova leitura com a anterior:
- * - lançamento novo  -> "Receita registrada" / "Despesa registrada"
- *   (inclui os gerados automaticamente pelas recorrências)
- * - lançamento alterado -> "Lançamento atualizado"
- * - lançamento removido -> "Lançamento excluído"
- * - saldo (receitas - despesas, o mesmo do Dashboard) que cai abaixo de
- *   [LOW_BALANCE_THRESHOLD] ou fica negativo -> alerta de saldo.
- *
- * A primeira leitura só serve de base (não notifica o histórico inteiro).
- */
 class TransactionNotifier(context: Context, private val uid: String) {
 
     private val appContext = context.applicationContext
     private val repo = TransactionsRepository(uid)
     private var listener: ValueEventListener? = null
 
-    // null = ainda não recebeu a primeira leitura.
     private var known: Map<String, Transaction>? = null
 
     fun start() {
@@ -49,8 +36,6 @@ class TransactionNotifier(context: Context, private val uid: String) {
             val removed = previous.values.filter { it.id !in current }
             val changed = current.values.filter { t -> previous[t.id]?.let { it != t } == true }
 
-            // Várias de uma vez (ex: recorrências do mês lançadas juntas) viram um
-            // aviso só, em vez de encher a barra de notificações.
             if (added.size > 3) {
                 NotificationHelper.notifyTransaction(
                     appContext, "added_batch".hashCode(),
@@ -65,8 +50,6 @@ class TransactionNotifier(context: Context, private val uid: String) {
                     )
                 }
             }
-            // Mesma ideia pra alterações e exclusões em massa (ex: "Simular ano
-            // completo" troca todos os lançamentos de uma vez).
             if (changed.size > 3) {
                 NotificationHelper.notifyTransaction(
                     appContext, "changed_batch".hashCode(),
@@ -102,9 +85,6 @@ class TransactionNotifier(context: Context, private val uid: String) {
         return "$title  $sign${formatMoneyPtBr(t.amount)}"
     }
 
-    // Estado do saldo salvo por usuário: só avisa quando PIORA (OK -> baixo,
-    // baixo -> negativo), não a cada abertura do app nem a cada lançamento
-    // enquanto o saldo continua baixo. Volta a OK quando o saldo se recupera.
     private fun checkBalance(balance: Double) {
         val prefs = appContext.getSharedPreferences("notification_prefs", Context.MODE_PRIVATE)
         val key = "balance_state_$uid"
@@ -131,7 +111,6 @@ class TransactionNotifier(context: Context, private val uid: String) {
     }
 
     companion object {
-        /** Abaixo deste saldo (em R$) o app avisa que está perto de zero. */
         const val LOW_BALANCE_THRESHOLD = 100.0
 
         private const val STATE_OK = 0

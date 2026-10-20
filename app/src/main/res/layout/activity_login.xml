@@ -13,7 +13,6 @@
         android:padding="32dp"
         android:gravity="center_horizontal|center_vertical">
 
-        <!-- Cabeçalho -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -40,7 +39,6 @@
 
         </LinearLayout>
 
-        <!-- Card de login -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -54,7 +52,6 @@
                 android:orientation="vertical"
                 android:padding="24dp">
 
-                <!-- Campo E-mail -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -75,7 +72,6 @@
 
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Campo Senha -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -98,7 +94,6 @@
 
                 </com.google.android.material.textfield.TextInputLayout>
 
-                <!-- Esqueci a senha -->
                 <TextView
                     android:id="@+id/tvForgot"
                     android:layout_width="wrap_content"
@@ -112,7 +107,6 @@
                     android:clickable="true"
                     android:focusable="true" />
 
-                <!-- Botão Entrar -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnLogin"
                     android:layout_width="match_parent"
@@ -127,7 +121,6 @@
 
         </androidx.cardview.widget.CardView>
 
-        <!-- Criar conta -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

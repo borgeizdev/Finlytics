@@ -33,9 +33,6 @@ class TransactionsFragment : Fragment() {
     private val typeFilterOptions = listOf("Todos os tipos", "Receitas", "Despesas")
 
     companion object {
-        // Em memória (não persiste no disco): mantém a seleção do usuário ao
-        // navegar entre abas durante a sessão, mas volta pro padrão "Todos"
-        // quando o processo do app morre e é reaberto.
         private var filterType = "Todos os tipos"
         private var filterCategory = "Todas as categorias"
         private var filterPayment = "Todas as formas de pagamento"
@@ -54,12 +51,8 @@ class TransactionsFragment : Fragment() {
         "Setembro", "Outubro", "Novembro", "Dezembro"
     )
 
-    // Formas de pagamento personalizadas em Perfil > Categorias > Pagamento
-    // (começa com as padrão até a lista do usuário chegar do Firebase).
     private var userPaymentMethods: List<String> = PaymentMethods.ALL
 
-    // Lista do usuário + formas já usadas em lançamentos antigos (que podem ter
-    // sido removidas da lista depois), para continuarem filtráveis.
     private fun paymentFilterOptions(): List<String> {
         val used = allTransactions.map { it.paymentMethod }.filter { it.isNotBlank() }
         val methods = (userPaymentMethods + used).distinctBy { it.lowercase() }
@@ -91,10 +84,6 @@ class TransactionsFragment : Fragment() {
         txRepo = null
     }
 
-    // Busca todas as transações do usuário (tempo real, ver TransactionsRepository.observe)
-    // e guarda em allTransactions. A lista completa nunca é exibida direto — sempre
-    // passa por applyFilter() antes de ir pro adapter, então qualquer mudança nos
-    // filtros ou uma nova transação chegando refaz esse recorte automaticamente.
     private fun loadTransactions() {
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
         CategoryRepository(uid).loadConfig { config ->
@@ -116,43 +105,20 @@ class TransactionsFragment : Fragment() {
         listOf("Todas as categorias") + allTransactions.map { it.category.ifBlank { "Outros" } }.distinct().sorted()
 
     private fun refreshCategoryOptions() {
-        // Se a categoria selecionada não existe mais nos lançamentos atuais, volta pro padrão.
         if (filterCategory !in categoryOptions()) filterCategory = "Todas as categorias"
     }
 
-    // ==========================================================================
-    // applyFilter() — os 4 filtros combinados, linha a linha
-    // ==========================================================================
-    // Não é uma nova busca no Firebase — é um FILTRO EM MEMÓRIA sobre
-    // allTransactions, que já está toda carregada (ver loadTransactions()). Os 4
-    // valores atuais (filterType, filterCategory, filterPayment, filterMonthPos)
-    // ficam no companion object da classe (ver mais acima) pra sobreviver a trocar
-    // de aba.
     private fun applyFilter() {
-        // Copia o valor atual do filtro de mês pra uma val local só por clareza
-        // de leitura (0 = "Todos os meses", 1 a 12 = o mês escolhido).
         val monthPos = filterMonthPos
 
-        // .filter { t -> ... } percorre allTransactions e mantém só os itens em
-        // que o bloco dentro das chaves devolver "true". "t" é o nome que demos
-        // pro parâmetro da lambda (uma transação de cada vez).
         val filtered = allTransactions.filter { t ->
 
-            // typeOk: "when" testa o valor de filterType contra cada opção, de
-            // cima pra baixo, e usa a primeira que bater; "else -> true" cobre
-            // o caso "Todos os tipos" (não filtra nada).
             val typeOk = when (filterType) {
                 "Receitas" -> t.type == "receita"
                 "Despesas" -> t.type == "despesa"
                 else -> true
             }
 
-            // dateOk: se o filtro de mês está em "Todos" (posição 0), passa
-            // direto (true). Senão, quebra a data ("yyyy-MM-dd") em pedaços
-            // usando o hífen como separador — parts[1] é o mês — e compara com
-            // o mês escolhido no filtro. .toIntOrNull() converte texto pra
-            // número (ou null se não for válido, o que faria a comparação
-            // falhar com segurança em vez de travar).
             val dateOk = if (monthPos == 0) {
                 true
             } else {
@@ -160,24 +126,12 @@ class TransactionsFragment : Fragment() {
                 parts.size >= 2 && parts[1].toIntOrNull() == monthPos
             }
 
-            // categoryOk: true se o filtro está em "Todas as categorias" OU se a
-            // categoria da transação bate com a escolhida. t.category.ifBlank
-            // {'{' } "Outros" {'}'} usa "Outros" quando a categoria está vazia — mesma
-            // regra usada em Relatórios pra transações sem categoria definida.
-            // .equals(..., ignoreCase = true) compara ignorando maiúscula/
-            // minúscula.
             val categoryOk = filterCategory == "Todas as categorias" ||
                 t.category.ifBlank { "Outros" }.equals(filterCategory, ignoreCase = true)
 
-            // paymentOk: mesma lógica de categoryOk, mas pra forma de pagamento —
-            // aqui o valor de reserva é PaymentMethods.NAO_INFORMADO em vez de
-            // "Outros", cobrindo transações antigas sem esse campo preenchido.
             val paymentOk = filterPayment == "Todas as formas de pagamento" ||
                 t.paymentMethod.ifBlank { PaymentMethods.NAO_INFORMADO }.equals(filterPayment, ignoreCase = true)
 
-            // A transação só sobrevive ao filtro se passar em TODOS os 4 testes
-            // ao mesmo tempo — "&&" é "E lógico": só é true se os dois lados
-            // forem true.
             typeOk && dateOk && categoryOk && paymentOk
         }
 

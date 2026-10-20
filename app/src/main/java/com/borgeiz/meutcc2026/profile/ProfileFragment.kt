@@ -304,10 +304,6 @@ class ProfileFragment : Fragment() {
             }
     }
 
-    // Primeiro passo da configuração de recorrências: só pergunta "receita ou
-    // despesa" (o CRUD de verdade fica em showRecurringTypeDialog). Esse dialog e
-    // os de baixo (categorias, metas) são montados na mão em Kotlin — sem XML —
-    // por isso o tanto de LinearLayout/TextView criado programaticamente aqui.
     private fun showRecurringItemsDialog(uid: String) {
         val ctx = requireContext()
 
@@ -326,12 +322,9 @@ class ProfileFragment : Fragment() {
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT
             ).also { it.gravity = Gravity.CENTER }
-            setOnClickListener { /* consome o toque para não fechar */ }
+            setOnClickListener { }
         }
 
-        // Card pequeno e de altura fixa (duas opções) — sem lista rolável aqui,
-        // então basta centralizar na tela, sem o problema de esticar visto no
-        // dialog de edição (showRecurringTypeDialog), que usa ScrollView.
         val frame = FrameLayout(ctx).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -471,14 +464,6 @@ class ProfileFragment : Fragment() {
         dialog.show()
     }
 
-    // Tela de "Recorrências" de um tipo (receita ou despesa): lista, permite
-    // adicionar/remover linhas (salário, Netflix, aluguel...) e salvar. Cada linha
-    // guarda título, categoria, valor e dia do mês. Ao salvar, RecurringRepository
-    // grava tudo em users/{uid}/recurringConfig e, se deu certo, chama
-    // checkAndPostIfNeeded imediatamente — então um item cadastrado para hoje já é
-    // lançado na hora, sem esperar o app reabrir. Um item cujo dia já passou este
-    // mês NÃO é lançado retroativamente (ver RecurringItem.startDate): começa no
-    // mês seguinte.
     private fun showRecurringTypeDialog(uid: String, type: String) {
         val ctx = requireContext()
         val recurringRepo = RecurringRepository(uid)
@@ -498,12 +483,6 @@ class ProfileFragment : Fragment() {
             }
         }
 
-        // Frame full-screen transparente — toque fora fecha o dialog. "root" só é
-        // anexado a ele depois de sabermos (após carregar os dados) se cabe
-        // centralizado ou se precisa rolar do topo — dialog.show() já roda na hora
-        // (sem esperar a rede) só com o frame vazio; o card aparece já no lugar
-        // certo, sem "pulo" nem sensação de lentidão. Antes isso usava um truque
-        // com ScrollView.isFillViewport que não centralizava de forma confiável.
         val frame = FrameLayout(ctx).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -515,9 +494,6 @@ class ProfileFragment : Fragment() {
         val hPad = dpToPx(24)
         val wPad = dpToPx(20)
 
-        // Decide pelo tamanho REAL do conteúdo já montado (não por "tem item ou não"):
-        // mede "root" com a largura disponível e compara com a altura da tela. Se
-        // couber, centraliza sem ScrollView; se não couber, ancora no topo e rola.
         fun attachRoot() {
             val maxWidth = resources.displayMetrics.widthPixels - 2 * wPad
             root.measure(
@@ -543,7 +519,7 @@ class ProfileFragment : Fragment() {
                     )
                     setPadding(wPad, hPad, wPad, hPad)
                     clipToPadding = false
-                    setOnClickListener { /* consome o toque para não fechar */ }
+                    setOnClickListener { }
                 }
                 root.layoutParams = FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
@@ -596,8 +572,6 @@ class ProfileFragment : Fragment() {
         val container = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         root.addView(container)
 
-        // original = item como veio do banco (null numa linha nova), usado ao salvar
-        // para decidir se a recorrência mantém o startDate ou passa a valer de hoje.
         data class RowRefs(
             val id: String,
             val etTitle: EditText,
@@ -607,8 +581,6 @@ class ProfileFragment : Fragment() {
             val original: RecurringItem?
         )
 
-        // Categorias salvas em Perfil > Configurações > Categorias, carregadas de forma
-        // assíncrona logo abaixo; cada linha usa esta lista para popular seu seletor.
         var categoryOptions = listOf<String>()
 
         fun categoryAdapter() = ArrayAdapter(ctx, android.R.layout.simple_dropdown_item_1line, categoryOptions)
@@ -682,8 +654,6 @@ class ProfileFragment : Fragment() {
                     .also { it.marginEnd = dpToPx(8) }
                 setAdapter(categoryAdapter())
                 setOnClickListener { showDropDown() }
-                // No primeiro toque o campo só ganha foco (o clique em si não abre o
-                // menu); sem isto o usuário precisa tocar duas vezes na primeira vez.
                 setOnFocusChangeListener { v, hasFocus -> if (hasFocus) (v as AutoCompleteTextView).showDropDown() }
             }
             val etAmount = EditText(ctx).apply {
@@ -748,12 +718,6 @@ class ProfileFragment : Fragment() {
                 if (day == null || day !in 1..31) { refs.etDay.error = "1 a 31"; return null }
                 refs.etDay.error = null
 
-                // Linha nova, dia trocado ou item antigo ainda sem data de início:
-                // passa a valer de hoje (um dia que já passou neste mês só é lançado
-                // a partir do mês seguinte). Item antigo é seguro de marcar aqui
-                // porque o que já estava vencido foi lançado ao abrir o app
-                // (MainActivity), antes de o usuário chegar nesta tela. Sem mudança
-                // no dia, mantém a data de início que já estava salva.
                 val original = refs.original
                 val startDate =
                     if (original == null || original.dayOfMonth != day || original.startDate.isBlank()) today
@@ -815,7 +779,6 @@ class ProfileFragment : Fragment() {
         btnRow.addView(btnSave)
         root.addView(btnRow)
 
-        // Guarda os itens do outro tipo (não editados nesta tela) para não perdê-los ao salvar.
         var otherTypeItems = listOf<RecurringItem>()
 
         categoryRepo.loadConfig { catConfig ->
@@ -838,9 +801,6 @@ class ProfileFragment : Fragment() {
         btnCancel.setOnClickListener { dialog.dismiss() }
         btnSave.setOnClickListener {
             val items  = collectEntries() ?: return@setOnClickListener
-            // otherTypeItems preserva os itens do OUTRO tipo (ex: editando despesas,
-            // não pode perder as receitas recorrentes já salvas) — essa tela edita só
-            // metade da lista por vez, mas o cadastro no banco é sempre a lista inteira.
             val config = RecurringConfig(items = otherTypeItems + items)
             recurringRepo.saveConfig(config)
                 .addOnSuccessListener {
@@ -860,11 +820,6 @@ class ProfileFragment : Fragment() {
         }
     }
 
-    // Tela de "Categorias": três listas editáveis (receita/despesa/pagamento) que
-    // alimentam os seletores de categoria e de forma de pagamento usados em
-    // AddTransactionFragment, EditTransactionActivity, no filtro de TransactionsFragment
-    // e nas próprias Recorrências/Metas. Ao salvar, sobrescreve inteiro o
-    // CategoryConfig em users/{uid}/categories (CategoryRepository.saveConfig).
     private fun showCategoriesDialog(uid: String) {
         val ctx = requireContext()
         val categoryRepo = CategoryRepository(uid)
@@ -882,12 +837,6 @@ class ProfileFragment : Fragment() {
             }
         }
 
-        // Frame full-screen transparente — toque fora fecha o dialog. "root" só é
-        // anexado a ele depois de sabermos (após carregar os dados) se cabe
-        // centralizado ou se precisa rolar do topo — dialog.show() já roda na hora
-        // (sem esperar a rede) só com o frame vazio; o card aparece já no lugar
-        // certo, sem "pulo" nem sensação de lentidão. Antes isso usava um truque
-        // com ScrollView.isFillViewport que não centralizava de forma confiável.
         val frame = FrameLayout(ctx).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -899,9 +848,6 @@ class ProfileFragment : Fragment() {
         val hPad = dpToPx(24)
         val wPad = dpToPx(20)
 
-        // Decide pelo tamanho REAL do conteúdo já montado (não por "tem item ou não"):
-        // mede "root" com a largura disponível e compara com a altura da tela. Se
-        // couber, centraliza sem ScrollView; se não couber, ancora no topo e rola.
         fun attachRoot() {
             val maxWidth = resources.displayMetrics.widthPixels - 2 * wPad
             root.measure(
@@ -927,7 +873,7 @@ class ProfileFragment : Fragment() {
                     )
                     setPadding(wPad, hPad, wPad, hPad)
                     clipToPadding = false
-                    setOnClickListener { /* consome o toque para não fechar */ }
+                    setOnClickListener { }
                 }
                 root.layoutParams = FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
@@ -974,12 +920,8 @@ class ProfileFragment : Fragment() {
         }
         root.addView(tvInfo)
 
-        // Abas Receita / Despesa / Pagamento: a aba ativa decide em qual lista
-        // (income/expense/payment) os itens adicionados entram.
         var currentTab = "receita"
 
-        // Três abas dividindo a largura: sem o padding lateral e a largura mínima
-        // padrão do MaterialButton, que cortavam o texto ("Despes...").
         fun tabButton(label: String, isLast: Boolean) = MaterialButton(ctx).apply {
             text = label
             textSize = 13f
@@ -1020,14 +962,12 @@ class ProfileFragment : Fragment() {
         root.addView(containerExpense)
         root.addView(containerPayment)
 
-        // Cada aba: botão da aba e a lista que ela mostra.
         val tabs = mapOf(
             "receita" to (btnTabReceita to containerIncome),
             "despesa" to (btnTabDespesa to containerExpense),
             "pagamento" to (btnTabPagamento to containerPayment)
         )
 
-        // Declarado aqui (e criado mais abaixo) para paintTabs poder trocar o texto.
         lateinit var btnAddEntry: MaterialButton
 
         fun paintTabs() {
@@ -1099,9 +1039,6 @@ class ProfileFragment : Fragment() {
             return true
         }
 
-        // distinctBy { it.lowercase() } remove duplicatas ignorando maiúscula/
-        // minúscula — evita que "Alimentação" e "alimentação" virem duas categorias
-        // diferentes por acidente.
         fun collectCategories(): CategoryConfig? {
             val income = mutableListOf<String>()
             val expense = mutableListOf<String>()
@@ -1109,8 +1046,6 @@ class ProfileFragment : Fragment() {
             if (!collectFrom(containerIncome, income)) return null
             if (!collectFrom(containerExpense, expense)) return null
             if (!collectFrom(containerPayment, payment)) return null
-            // Lista vazia de formas de pagamento deixaria o formulário de despesa
-            // sem opção nenhuma — exige pelo menos uma.
             if (payment.isEmpty()) {
                 Toast.makeText(ctx, "Adicione pelo menos uma forma de pagamento", Toast.LENGTH_SHORT).show()
                 currentTab = "pagamento"
@@ -1191,11 +1126,6 @@ class ProfileFragment : Fragment() {
         }
     }
 
-    // Tela de "Metas": duas abas — "Limite de gasto" (geral ou por categoria de
-    // despesa) e "Lucro mensal" (receita menos despesa). Cada linha vira um objeto
-    // Goal com um "type" ("gasto"/"lucro") que depois decide, em ReportsFragment,
-    // se progresso alto na barra é bom ou ruim. Salvar sobrescreve o GoalConfig
-    // inteiro em users/{uid}/goals.
     private fun showGoalsDialog(uid: String) {
         val ctx = requireContext()
         val goalRepo = GoalRepository(uid)
@@ -1214,12 +1144,6 @@ class ProfileFragment : Fragment() {
             }
         }
 
-        // Frame full-screen transparente — toque fora fecha o dialog. "root" só é
-        // anexado a ele depois de sabermos (após carregar os dados) se cabe
-        // centralizado ou se precisa rolar do topo — dialog.show() já roda na hora
-        // (sem esperar a rede) só com o frame vazio; o card aparece já no lugar
-        // certo, sem "pulo" nem sensação de lentidão. Antes isso usava um truque
-        // com ScrollView.isFillViewport que não centralizava de forma confiável.
         val frame = FrameLayout(ctx).apply {
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -1231,9 +1155,6 @@ class ProfileFragment : Fragment() {
         val hPad = dpToPx(24)
         val wPad = dpToPx(20)
 
-        // Decide pelo tamanho REAL do conteúdo já montado (não por "tem item ou não"):
-        // mede "root" com a largura disponível e compara com a altura da tela. Se
-        // couber, centraliza sem ScrollView; se não couber, ancora no topo e rola.
         fun attachRoot() {
             val maxWidth = resources.displayMetrics.widthPixels - 2 * wPad
             root.measure(
@@ -1259,7 +1180,7 @@ class ProfileFragment : Fragment() {
                     )
                     setPadding(wPad, hPad, wPad, hPad)
                     clipToPadding = false
-                    setOnClickListener { /* consome o toque para não fechar */ }
+                    setOnClickListener { }
                 }
                 root.layoutParams = FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.MATCH_PARENT,
@@ -1305,9 +1226,6 @@ class ProfileFragment : Fragment() {
         }
         root.addView(tvInfo)
 
-        // Abas: "Limite de gasto" (meta tradicional, geral ou por categoria) e
-        // "Lucro mensal" (receita menos despesa do mês >= valor alvo). Cada aba
-        // guarda sua própria lista de metas em memória até salvar.
         var currentTab = "gasto"
 
         val btnTabGasto = MaterialButton(ctx).apply {
@@ -1479,10 +1397,6 @@ class ProfileFragment : Fragment() {
             return true
         }
 
-        // Diferente das recorrências (que separam "editando agora" de "preservar o
-        // resto" com otherTypeItems), aqui as duas abas convivem na mesma tela ao
-        // mesmo tempo: containerGasto e containerLucro são duas listas visuais
-        // independentes, e collectGoals percorre as duas e junta tudo numa lista só.
         fun collectGoals(): List<Goal>? {
             val result = mutableListOf<Goal>()
             if (!collectFrom(containerGasto, "gasto", result)) return null

@@ -9,13 +9,7 @@ import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 
-/**
- * Substitui as listas de categoria hardcoded e duplicadas em
- * AddTransactionFragment/EditTransactionActivity por uma config única em
- * users/{uid}/categories, editável pelo usuário. Na primeira leitura (sem
- * config salva ainda) semeia e persiste os valores que já eram hardcoded,
- * para não quebrar o formulário de ninguém.
- */
+
 class CategoryRepository(uid: String) {
 
     private val ref: DatabaseReference = FirebaseDatabase.getInstance().reference
@@ -26,8 +20,7 @@ class CategoryRepository(uid: String) {
             override fun onDataChange(snapshot: DataSnapshot) {
                 if (snapshot.exists()) {
                     val config = snapshot.getValue(CategoryConfig::class.java) ?: CategoryConfig()
-                    // Configs salvas antes da aba "Pagamento" existir não têm a
-                    // lista de formas de pagamento: semeia com as padrão.
+
                     if (config.payment.isEmpty()) {
                         config.payment = DEFAULT_PAYMENT
                         ref.child("payment").setValue(DEFAULT_PAYMENT)
@@ -44,8 +37,7 @@ class CategoryRepository(uid: String) {
         })
     }
 
-    // Cadastro no banco: sobrescreve o node inteiro users/{uid}/categories com as
-    // duas listas (income/expense) de uma vez.
+
     fun saveConfig(config: CategoryConfig): Task<Void> = ref.setValue(config)
 
     companion object {

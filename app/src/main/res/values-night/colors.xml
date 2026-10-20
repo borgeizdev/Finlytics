@@ -1,14 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- DARK MODE — salvar em res/values-night/colors.xml -->
-
     <color name="bg_page">#0F172A</color>
     <color name="bg_card">#1E293B</color>
     <color name="bg_card_subtle">#172033</color>
     <color name="bg_input">#172033</color>
 
-    <!-- Azul escuro mais próximo do light, sem ciano chocante -->
     <color name="primary">#3B82F6</color>
     <color name="primary_dark">#2563EB</color>
     <color name="primary_hover">#2563EB</color>
@@ -42,7 +39,6 @@
     <color name="settings_badge_category">#422006</color>
     <color name="settings_badge_goal">#083344</color>
 
-    <!-- aliases usados no themes.xml night -->
     <color name="dark_primary">#3B82F6</color>
     <color name="dark_primary_hover">#2563EB</color>
     <color name="dark_on_primary">#FFFFFF</color>

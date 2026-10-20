@@ -4,7 +4,6 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
-    <!-- LIGHT MODE -->
     <color name="bg_page">#F7F9FC</color>
     <color name="bg_card">#FFFFFF</color>
     <color name="bg_card_subtle">#F1F5F9</color>
@@ -43,7 +42,6 @@
     <color name="settings_badge_category">#FEF3C7</color>
     <color name="settings_badge_goal">#CFFAFE</color>
 
-    <!-- aliases usados no themes.xml -->
     <color name="dark_primary">#2563EB</color>
     <color name="dark_primary_hover">#1D4ED8</color>
     <color name="dark_on_primary">#FFFFFF</color>
