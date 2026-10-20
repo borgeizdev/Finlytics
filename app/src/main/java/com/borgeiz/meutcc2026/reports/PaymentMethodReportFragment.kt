@@ -9,11 +9,8 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
 import android.widget.ImageButton
 import android.widget.LinearLayout
-import android.widget.Spinner
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
@@ -30,8 +27,6 @@ import com.google.firebase.database.ValueEventListener
 import java.util.Calendar
 
 class PaymentMethodReportFragment : Fragment() {
-
-    private val typeFilterLabels = listOf("Todos os tipos", "Receitas", "Despesas")
 
     private var txRepoRef: TransactionsRepository? = null
     private var txListenerRef: ValueEventListener? = null
@@ -53,7 +48,6 @@ class PaymentMethodReportFragment : Fragment() {
         val btnBack      = view.findViewById<ImageButton>(R.id.btnBack)
         val etStartDate  = view.findViewById<TextInputEditText>(R.id.etStartDate)
         val etEndDate    = view.findViewById<TextInputEditText>(R.id.etEndDate)
-        val spTypeFilter = view.findViewById<Spinner>(R.id.spTypeFilter)
         val tvTotal      = view.findViewById<TextView>(R.id.tvPeriodTotal)
         val pieChart     = view.findViewById<PieChart>(R.id.pieChartPaymentMethod)
         val llBreakdown  = view.findViewById<LinearLayout>(R.id.llPaymentBreakdown)
@@ -61,12 +55,6 @@ class PaymentMethodReportFragment : Fragment() {
         btnBack.setOnClickListener { parentFragmentManager.popBackStack() }
 
         pieChart.setNoDataText("")
-
-        spTypeFilter.adapter = ArrayAdapter(
-            requireContext(),
-            android.R.layout.simple_spinner_dropdown_item,
-            typeFilterLabels
-        )
 
         val today = Calendar.getInstance()
         etEndDate.setText(
@@ -82,14 +70,8 @@ class PaymentMethodReportFragment : Fragment() {
         fun refresh() {
             val start = toStoredDate(etStartDate.text?.toString().orEmpty())
             val end   = toStoredDate(etEndDate.text?.toString().orEmpty())
-            val typeFilter = when (spTypeFilter.selectedItemPosition) {
-                1 -> "receita"
-                2 -> "despesa"
-                else -> null
-            }
-
             val filtered = allTransactions.filter { t ->
-                (typeFilter == null || t.type == typeFilter) &&
+                t.type == "despesa" &&
                     (start.isBlank() || t.date >= start) &&
                     (end.isBlank() || t.date <= end)
             }
@@ -142,11 +124,6 @@ class PaymentMethodReportFragment : Fragment() {
 
         etStartDate.setOnClickListener { pickDate(etStartDate) }
         etEndDate.setOnClickListener { pickDate(etEndDate) }
-
-        spTypeFilter.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(p: AdapterView<*>?, v: View?, pos: Int, id: Long) = refresh()
-            override fun onNothingSelected(p: AdapterView<*>?) {}
-        }
 
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return view
         val txRepo = TransactionsRepository(uid)
