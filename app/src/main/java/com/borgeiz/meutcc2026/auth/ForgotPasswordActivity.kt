@@ -4,6 +4,7 @@ import com.borgeiz.meutcc2026.R
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.auth.FirebaseAuth
@@ -16,6 +17,9 @@ class ForgotPasswordActivity : AppCompatActivity() {
 
         val etEmail = findViewById<EditText>(R.id.etEmailReset)
         val btnSend = findViewById<Button>(R.id.btnSendReset)
+        val tvBackToLogin = findViewById<TextView>(R.id.tvBackToLogin)
+
+        tvBackToLogin.setOnClickListener { finish() }
 
         btnSend.setOnClickListener {
             val email = etEmail.text.toString().trim()

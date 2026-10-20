@@ -1331,8 +1331,6 @@ class ProfileFragment : Fragment() {
             }
         }
         paintTabs()
-        btnTabGasto.setOnClickListener { currentTab = "gasto"; paintTabs() }
-        btnTabLucro.setOnClickListener { currentTab = "lucro"; paintTabs() }
 
         data class GoalRowRefs(
             val id: String,
@@ -1394,7 +1392,11 @@ class ProfileFragment : Fragment() {
             containerGasto.addView(row)
         }
 
+        lateinit var updateAddButton: () -> Unit
+
+        // Só pode existir uma meta de lucro mensal
         fun addLucroRow(goal: Goal? = null) {
+            if (containerLucro.childCount > 0) return
             val rowId = goal?.id?.takeIf { it.isNotBlank() } ?: java.util.UUID.randomUUID().toString()
 
             val row = LinearLayout(ctx).apply {
@@ -1423,13 +1425,14 @@ class ProfileFragment : Fragment() {
                 setBackgroundColor(android.graphics.Color.TRANSPARENT)
                 layoutParams = LinearLayout.LayoutParams(dpToPx(40), dpToPx(40))
                 contentDescription = "Remover"
-                setOnClickListener { containerLucro.removeView(row) }
+                setOnClickListener { containerLucro.removeView(row); updateAddButton() }
             }
 
             row.addView(etAmount)
             row.addView(btnRemove)
             row.tag = GoalRowRefs(rowId, null, etAmount, emptyList())
             containerLucro.addView(row)
+            updateAddButton()
         }
 
         fun collectFrom(container: LinearLayout, type: String, result: MutableList<Goal>): Boolean {
@@ -1462,6 +1465,13 @@ class ProfileFragment : Fragment() {
             ).also { it.topMargin = dpToPx(4); it.bottomMargin = dpToPx(20) }
         }
         root.addView(btnAddEntry)
+
+        updateAddButton = {
+            btnAddEntry.visibility =
+                if (currentTab == "lucro" && containerLucro.childCount > 0) View.GONE else View.VISIBLE
+        }
+        btnTabGasto.setOnClickListener { currentTab = "gasto"; paintTabs(); updateAddButton() }
+        btnTabLucro.setOnClickListener { currentTab = "lucro"; paintTabs(); updateAddButton() }
 
         val btnRow = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL

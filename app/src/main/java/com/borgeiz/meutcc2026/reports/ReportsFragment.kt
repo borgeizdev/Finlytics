@@ -453,7 +453,11 @@ class ReportsFragment : Fragment() {
         val isDark = isDarkMode(ctx)
         val trackColor = if (isDark) Color.parseColor("#1E293B") else Color.parseColor("#E2E8F0")
 
-        goals.forEachIndexed { idx, goal ->
+        // Apenas uma meta de lucro por mês: ignora duplicadas salvas antes dessa regra
+        val firstLucro = goals.firstOrNull { it.type == "lucro" }
+        val visibleGoals = goals.filter { it.type != "lucro" || it === firstLucro }
+
+        visibleGoals.forEachIndexed { idx, goal ->
             val isLucro = goal.type == "lucro"
 
             val spent = if (goal.category.isBlank()) overallExpense else (categoryTotals[goal.category] ?: 0.0)
