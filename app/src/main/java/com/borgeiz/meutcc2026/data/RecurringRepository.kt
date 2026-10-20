@@ -1,5 +1,6 @@
 package com.borgeiz.meutcc2026.data
 
+import com.borgeiz.meutcc2026.model.PaymentMethods
 import com.borgeiz.meutcc2026.model.RecurringConfig
 import com.borgeiz.meutcc2026.model.RecurringItem
 import com.borgeiz.meutcc2026.model.SalaryConfig
@@ -73,6 +74,29 @@ class RecurringRepository(uid: String) {
         return configRef.setValue(config)
     }
 
+
+    fun backfillPaymentMethods(config: RecurringConfig) {
+        val methodById = config.items
+            .filter { it.type == "despesa" && it.paymentMethod.isNotBlank() }
+            .associate { it.id to it.paymentMethod }
+        if (methodById.isEmpty()) return
+
+        txRef.addListenerForSingleValueEvent(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val updates = mutableMapOf<String, Any?>()
+                snapshot.children.forEach { tx ->
+                    val recurringId = tx.child("recurringId").getValue(String::class.java).orEmpty()
+                    val method = methodById[recurringId] ?: return@forEach
+                    if (tx.child("type").getValue(String::class.java) != "despesa") return@forEach
+                    val current = tx.child("paymentMethod").getValue(String::class.java).orEmpty()
+                    if (current.isNotBlank() && current != PaymentMethods.NAO_INFORMADO) return@forEach
+                    updates["${tx.key}/paymentMethod"] = method
+                }
+                if (updates.isNotEmpty()) txRef.updateChildren(updates)
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        })
+    }
 
     fun checkAndPostIfNeeded(config: RecurringConfig, onPosted: (Transaction) -> Unit = {}) {
 

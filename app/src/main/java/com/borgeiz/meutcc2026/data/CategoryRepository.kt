@@ -79,6 +79,10 @@ class CategoryRepository(uid: String) {
                 renames.forType(type).renamed(category)?.let {
                     updates["recurringConfig/items/${item.key}/category"] = it
                 }
+                val payment = item.child("paymentMethod").getValue(String::class.java).orEmpty()
+                renames.payment.renamed(payment)?.let {
+                    updates["recurringConfig/items/${item.key}/paymentMethod"] = it
+                }
             }
 
             snapshot.child("goals").child("items").children.forEach { goal ->

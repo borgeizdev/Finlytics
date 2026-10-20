@@ -588,10 +588,15 @@ class ProfileFragment : Fragment() {
 
         fun categoryAdapter() = ArrayAdapter(ctx, android.R.layout.simple_dropdown_item_1line, categoryOptions)
 
+        var paymentOptions = PaymentMethods.ALL
+
+        fun paymentAdapter() = ArrayAdapter(ctx, android.R.layout.simple_dropdown_item_1line, paymentOptions)
+
         fun refreshCategoryAdapters() {
             for (i in 0 until container.childCount) {
                 val refs = container.getChildAt(i).tag as? RowRefs ?: continue
                 refs.etCategory.setAdapter(categoryAdapter())
+                refs.etPayment?.setAdapter(paymentAdapter())
             }
         }
 
@@ -690,7 +695,7 @@ class ProfileFragment : Fragment() {
 
             val etPayment = if (type == "receita") null else AutoCompleteTextView(ctx).apply {
                 hint = "Forma de pagamento"
-                setText(item?.paymentMethod?.takeIf { it.isNotBlank() } ?: PaymentMethods.ALL[0], false)
+                setText(item?.paymentMethod?.takeIf { it.isNotBlank() } ?: paymentOptions[0], false)
                 inputType = android.text.InputType.TYPE_NULL
                 isSingleLine = true
                 setHintTextColor(ctx.getColor(R.color.text_hint))
@@ -700,7 +705,7 @@ class ProfileFragment : Fragment() {
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
                 ).also { it.topMargin = dpToPx(8) }
-                setAdapter(ArrayAdapter(ctx, android.R.layout.simple_dropdown_item_1line, PaymentMethods.ALL))
+                setAdapter(paymentAdapter())
                 setOnClickListener { showDropDown() }
                 setOnFocusChangeListener { v, hasFocus -> if (hasFocus) (v as AutoCompleteTextView).showDropDown() }
             }
@@ -806,6 +811,7 @@ class ProfileFragment : Fragment() {
         categoryRepo.loadConfig { catConfig ->
             if (!isAdded) return@loadConfig
             categoryOptions = if (type == "receita") catConfig.income else catConfig.expense
+            if (catConfig.payment.isNotEmpty()) paymentOptions = catConfig.payment
             refreshCategoryAdapters()
         }
 
@@ -827,6 +833,7 @@ class ProfileFragment : Fragment() {
             recurringRepo.saveConfig(config)
                 .addOnSuccessListener {
                     Toast.makeText(ctx, "Recorrências salvas!", Toast.LENGTH_SHORT).show()
+                    recurringRepo.backfillPaymentMethods(config)
                     if (config.items.isNotEmpty()) recurringRepo.checkAndPostIfNeeded(config) { tx ->
                         if (isAdded) Toast.makeText(
                             ctx,
