@@ -695,7 +695,7 @@ class ProfileFragment : Fragment() {
 
             val etPayment = if (type == "receita") null else AutoCompleteTextView(ctx).apply {
                 hint = "Forma de pagamento"
-                setText(item?.paymentMethod?.takeIf { it.isNotBlank() } ?: paymentOptions[0], false)
+                setText(item?.paymentMethod?.takeIf { PaymentMethods.isInformed(it) } ?: "", false)
                 inputType = android.text.InputType.TYPE_NULL
                 isSingleLine = true
                 setHintTextColor(ctx.getColor(R.color.text_hint))
@@ -740,6 +740,12 @@ class ProfileFragment : Fragment() {
                 if (amount == null || amount <= 0) { refs.etAmount.error = "Valor inválido"; return null }
                 refs.etAmount.error = null
 
+                val paymentMethod = refs.etPayment?.text?.toString()?.trim().orEmpty()
+                if (refs.etPayment != null && !PaymentMethods.isInformed(paymentMethod)) {
+                    refs.etPayment.error = "Informe a forma de pagamento"; return null
+                }
+                refs.etPayment?.error = null
+
                 val day = refs.etDay.text.toString().trim().toIntOrNull()
                 if (day == null || day !in 1..31) { refs.etDay.error = "1 a 31"; return null }
                 refs.etDay.error = null
@@ -756,7 +762,7 @@ class ProfileFragment : Fragment() {
                         type = type,
                         amount = amount,
                         category = category,
-                        paymentMethod = refs.etPayment?.text?.toString()?.trim().orEmpty(),
+                        paymentMethod = paymentMethod,
                         dayOfMonth = day,
                         startDate = startDate
                     )
@@ -833,7 +839,6 @@ class ProfileFragment : Fragment() {
             recurringRepo.saveConfig(config)
                 .addOnSuccessListener {
                     Toast.makeText(ctx, "Recorrências salvas!", Toast.LENGTH_SHORT).show()
-                    recurringRepo.backfillPaymentMethods(config)
                     if (config.items.isNotEmpty()) recurringRepo.checkAndPostIfNeeded(config) { tx ->
                         if (isAdded) Toast.makeText(
                             ctx,

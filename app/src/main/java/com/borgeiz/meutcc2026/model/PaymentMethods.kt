@@ -7,4 +7,7 @@ object PaymentMethods {
     )
 
     const val NAO_INFORMADO = "Não informado"
+
+    fun isInformed(method: String): Boolean =
+        method.isNotBlank() && !method.equals(NAO_INFORMADO, ignoreCase = true)
 }

@@ -184,10 +184,7 @@ class MainActivity : AppCompatActivity() {
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
         val recurringRepo = RecurringRepository(uid)
         recurringRepo.loadConfig { config ->
-            if (config != null) {
-                recurringRepo.backfillPaymentMethods(config)
-                recurringRepo.checkAndPostIfNeeded(config)
-            }
+            if (config != null) recurringRepo.checkAndPostIfNeeded(config)
         }
     }
 }
