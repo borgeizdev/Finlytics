@@ -91,6 +91,10 @@ class CategoryRepository(uid: String) {
                 renames.expense.renamed(category)?.let {
                     updates["goals/items/${goal.key}/category"] = it
                 }
+                val payment = goal.child("paymentMethod").getValue(String::class.java).orEmpty()
+                renames.payment.renamed(payment)?.let {
+                    updates["goals/items/${goal.key}/paymentMethod"] = it
+                }
             }
 
             userRef.updateChildren(updates)

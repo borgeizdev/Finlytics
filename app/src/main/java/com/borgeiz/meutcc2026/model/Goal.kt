@@ -5,7 +5,8 @@ data class Goal(
     var category: String = "",
     var targetAmount: Double = 0.0,
     var period: String = "mensal",
-    var type: String = "gasto"
+    var type: String = "gasto",
+    var paymentMethod: String = ""
 )
 
 data class GoalConfig(

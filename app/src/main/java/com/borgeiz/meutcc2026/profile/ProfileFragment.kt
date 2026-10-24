@@ -115,7 +115,7 @@ class ProfileFragment : Fragment() {
             MenuItem(R.drawable.ic_palette,   R.color.primary, R.color.settings_badge_display, "Configurações de exibição", "Tema claro, escuro ou sistema"),
             MenuItem(R.drawable.ic_wallet,    R.color.income,  R.color.settings_badge_salary,  "Recorrências",               "Salário, assinaturas e contas fixas"),
             MenuItem(R.drawable.ic_tag,       R.color.primary, R.color.settings_badge_category, "Categorias",                "Receita, despesa e formas de pagamento"),
-            MenuItem(R.drawable.ic_bar_chart, R.color.primary, R.color.settings_badge_goal,     "Metas",                     "Limites de gasto mensais")
+            MenuItem(R.drawable.ic_bar_chart, R.color.primary, R.color.settings_badge_goal,     "Metas",                     "Limites de gasto e por pagamento")
         )
 
         val dialog = AlertDialog.Builder(ctx)
@@ -1276,14 +1276,21 @@ class ProfileFragment : Fragment() {
         var currentTab = "gasto"
 
         val btnTabGasto = MaterialButton(ctx).apply {
-            text = "Limite de gasto"
+            text = "Gasto"
+            textSize = 12f
+            isAllCaps = false
+            cornerRadius = dpToPx(10)
+            layoutParams = LinearLayout.LayoutParams(0, dpToPx(42), 1f).also { it.marginEnd = dpToPx(6) }
+        }
+        val btnTabPagamento = MaterialButton(ctx).apply {
+            text = "Pagamento"
             textSize = 12f
             isAllCaps = false
             cornerRadius = dpToPx(10)
             layoutParams = LinearLayout.LayoutParams(0, dpToPx(42), 1f).also { it.marginEnd = dpToPx(6) }
         }
         val btnTabLucro = MaterialButton(ctx).apply {
-            text = "Lucro mensal"
+            text = "Lucro"
             textSize = 12f
             isAllCaps = false
             cornerRadius = dpToPx(10)
@@ -1296,15 +1303,21 @@ class ProfileFragment : Fragment() {
             ).also { it.bottomMargin = dpToPx(16) }
         }
         tabRow.addView(btnTabGasto)
+        tabRow.addView(btnTabPagamento)
         tabRow.addView(btnTabLucro)
         root.addView(tabRow)
 
         val containerGasto = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        val containerPagamento = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            visibility = View.GONE
+        }
         val containerLucro = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             visibility = View.GONE
         }
         root.addView(containerGasto)
+        root.addView(containerPagamento)
         root.addView(containerLucro)
 
         fun paintTabs() {
@@ -1312,22 +1325,21 @@ class ProfileFragment : Fragment() {
             val activeText   = ctx.getColor(R.color.on_primary)
             val inactiveBg   = ctx.getColor(R.color.bg_card_subtle)
             val inactiveText = ctx.getColor(R.color.text_secondary)
-            if (currentTab == "gasto") {
-                btnTabGasto.backgroundTintList = ColorStateList.valueOf(activeColor)
-                btnTabGasto.setTextColor(activeText)
-                btnTabLucro.backgroundTintList = ColorStateList.valueOf(inactiveBg)
-                btnTabLucro.setTextColor(inactiveText)
-                containerGasto.visibility = View.VISIBLE
-                containerLucro.visibility = View.GONE
-                tvInfo.text = "Defina um limite de gasto mensal, geral ou por categoria. O progresso mostra o quanto já foi gasto em relação a esse limite — passar de 100% significa que a meta estourou."
-            } else {
-                btnTabLucro.backgroundTintList = ColorStateList.valueOf(activeColor)
-                btnTabLucro.setTextColor(activeText)
-                btnTabGasto.backgroundTintList = ColorStateList.valueOf(inactiveBg)
-                btnTabGasto.setTextColor(inactiveText)
-                containerGasto.visibility = View.GONE
-                containerLucro.visibility = View.VISIBLE
-                tvInfo.text = "Defina quanto você quer que sobre no mês (receitas menos despesas). O progresso mostra o quanto desse lucro-alvo já foi alcançado — chegar a 100% significa que a meta foi batida."
+            val tabs = listOf(
+                Triple("gasto", btnTabGasto, containerGasto),
+                Triple("pagamento", btnTabPagamento, containerPagamento),
+                Triple("lucro", btnTabLucro, containerLucro)
+            )
+            for ((type, btn, container) in tabs) {
+                val active = type == currentTab
+                btn.backgroundTintList = ColorStateList.valueOf(if (active) activeColor else inactiveBg)
+                btn.setTextColor(if (active) activeText else inactiveText)
+                container.visibility = if (active) View.VISIBLE else View.GONE
+            }
+            tvInfo.text = when (currentTab) {
+                "gasto" -> "Defina um limite de gasto mensal, geral ou por categoria. O progresso mostra o quanto já foi gasto em relação a esse limite — passar de 100% significa que a meta estourou."
+                "pagamento" -> "Defina um limite de gasto mensal por forma de pagamento (cartão de crédito, débito, Pix...). O progresso soma só as despesas pagas daquela forma — passar de 100% significa que o limite estourou."
+                else -> "Defina quanto você quer que sobre no mês (receitas menos despesas). O progresso mostra o quanto desse lucro-alvo já foi alcançado — chegar a 100% significa que a meta foi batida."
             }
         }
         paintTabs()
@@ -1340,6 +1352,7 @@ class ProfileFragment : Fragment() {
         )
 
         var expenseCategories = listOf<String>()
+        var paymentMethods = listOf<String>()
 
         fun addGastoRow(goal: Goal? = null) {
             val rowId = goal?.id?.takeIf { it.isNotBlank() } ?: java.util.UUID.randomUUID().toString()
@@ -1392,6 +1405,56 @@ class ProfileFragment : Fragment() {
             containerGasto.addView(row)
         }
 
+        fun addPagamentoRow(goal: Goal? = null) {
+            val rowId = goal?.id?.takeIf { it.isNotBlank() } ?: java.util.UUID.randomUUID().toString()
+
+            val row = LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+                ).also { it.bottomMargin = dpToPx(12) }
+            }
+
+            val saved = goal?.paymentMethod.orEmpty()
+            val methodValues = if (saved.isNotBlank() && saved !in paymentMethods) paymentMethods + saved else paymentMethods
+
+            val spMethod = Spinner(ctx).apply {
+                adapter = ArrayAdapter(ctx, android.R.layout.simple_spinner_dropdown_item, methodValues)
+                background = androidx.core.content.ContextCompat.getDrawable(ctx, R.drawable.bg_spinner)
+                setPadding(dpToPx(10), 0, dpToPx(10), 0)
+                layoutParams = LinearLayout.LayoutParams(0, dpToPx(44), 1f).also { it.marginEnd = dpToPx(8) }
+            }
+            spMethod.setSelection(methodValues.indexOf(saved).coerceAtLeast(0))
+
+            val etAmount = EditText(ctx).apply {
+                hint = "Limite (R$)"
+                setupMoneyInputPtBr()
+                setText(if ((goal?.targetAmount ?: 0.0) > 0) formatAmountInputPtBr(goal!!.targetAmount) else "")
+                isSingleLine = true
+                setHintTextColor(ctx.getColor(R.color.text_hint))
+                setTextColor(ctx.getColor(R.color.text_heading))
+                background = androidx.core.content.ContextCompat.getDrawable(ctx, R.drawable.bg_outlined_input)
+                setPadding(dpToPx(12), dpToPx(14), dpToPx(12), dpToPx(14))
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+                    .also { it.marginEnd = dpToPx(8) }
+            }
+
+            val btnRemove = ImageButton(ctx).apply {
+                setImageDrawable(androidx.core.content.ContextCompat.getDrawable(ctx, R.drawable.ic_remove))
+                setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                layoutParams = LinearLayout.LayoutParams(dpToPx(40), dpToPx(40))
+                contentDescription = "Remover"
+                setOnClickListener { containerPagamento.removeView(row) }
+            }
+
+            row.addView(spMethod)
+            row.addView(etAmount)
+            row.addView(btnRemove)
+            row.tag = GoalRowRefs(rowId, spMethod, etAmount, methodValues)
+            containerPagamento.addView(row)
+        }
+
         lateinit var updateAddButton: () -> Unit
 
         // Só pode existir uma meta de lucro mensal
@@ -1441,8 +1504,16 @@ class ProfileFragment : Fragment() {
                 val amount = parseAmountPtBr(refs.etAmount.text.toString())
                 if (amount == null || amount <= 0.0) { refs.etAmount.error = "Valor inválido"; return false }
                 refs.etAmount.error = null
-                val category = refs.spCategory?.let { sp -> refs.categoryValues.getOrElse(sp.selectedItemPosition) { "" } } ?: ""
-                result.add(Goal(id = refs.id, category = category, targetAmount = amount, period = "mensal", type = type))
+                val selected = refs.spCategory?.let { sp -> refs.categoryValues.getOrElse(sp.selectedItemPosition) { "" } } ?: ""
+                val isPagamento = type == "pagamento"
+                result.add(Goal(
+                    id = refs.id,
+                    category = if (isPagamento) "" else selected,
+                    targetAmount = amount,
+                    period = "mensal",
+                    type = type,
+                    paymentMethod = if (isPagamento) selected else ""
+                ))
             }
             return true
         }
@@ -1450,6 +1521,7 @@ class ProfileFragment : Fragment() {
         fun collectGoals(): List<Goal>? {
             val result = mutableListOf<Goal>()
             if (!collectFrom(containerGasto, "gasto", result)) return null
+            if (!collectFrom(containerPagamento, "pagamento", result)) return null
             if (!collectFrom(containerLucro, "lucro", result)) return null
             return result
         }
@@ -1471,6 +1543,7 @@ class ProfileFragment : Fragment() {
                 if (currentTab == "lucro" && containerLucro.childCount > 0) View.GONE else View.VISIBLE
         }
         btnTabGasto.setOnClickListener { currentTab = "gasto"; paintTabs(); updateAddButton() }
+        btnTabPagamento.setOnClickListener { currentTab = "pagamento"; paintTabs(); updateAddButton() }
         btnTabLucro.setOnClickListener { currentTab = "lucro"; paintTabs(); updateAddButton() }
 
         val btnRow = LinearLayout(ctx).apply {
@@ -1505,18 +1578,30 @@ class ProfileFragment : Fragment() {
         categoryRepo.loadConfig { catConfig ->
             if (!isAdded) return@loadConfig
             expenseCategories = catConfig.expense
+            paymentMethods = catConfig.payment.ifEmpty { CategoryRepository.DEFAULT_PAYMENT }
             goalRepo.loadConfig { goalConfig ->
                 if (!isAdded) return@loadConfig
                 containerGasto.removeAllViews()
+                containerPagamento.removeAllViews()
                 containerLucro.removeAllViews()
                 goalConfig.items.forEach { goal ->
-                    if (goal.type == "lucro") addLucroRow(goal) else addGastoRow(goal)
+                    when (goal.type) {
+                        "lucro" -> addLucroRow(goal)
+                        "pagamento" -> addPagamentoRow(goal)
+                        else -> addGastoRow(goal)
+                    }
                 }
                 attachRoot()
             }
         }
 
-        btnAddEntry.setOnClickListener { if (currentTab == "gasto") addGastoRow() else addLucroRow() }
+        btnAddEntry.setOnClickListener {
+            when (currentTab) {
+                "gasto" -> addGastoRow()
+                "pagamento" -> addPagamentoRow()
+                else -> addLucroRow()
+            }
+        }
         btnCancel.setOnClickListener { dialog.dismiss() }
         btnSave.setOnClickListener {
             val goals = collectGoals() ?: return@setOnClickListener

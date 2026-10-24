@@ -24,6 +24,7 @@ import com.borgeiz.meutcc2026.model.Goal
 import com.borgeiz.meutcc2026.model.Transaction
 import com.borgeiz.meutcc2026.util.buildBreakdownRows
 import com.borgeiz.meutcc2026.util.categoryTotalsForMonth
+import com.borgeiz.meutcc2026.util.paymentTotalsForMonth
 import com.borgeiz.meutcc2026.util.chartPaletteHex
 import com.borgeiz.meutcc2026.util.formatIntegerPtBr
 import com.borgeiz.meutcc2026.util.formatMoneyPtBr
@@ -294,7 +295,8 @@ class ReportsFragment : Fragment() {
             val overallExpense = categoryTotals.values.sum()
             val overallIncome = allTransactions.categoryTotalsForMonth("receita", curYear, curMonth).values.sum()
             val monthlyProfit = overallIncome - overallExpense
-            buildGoalsProgress(llGoalsProgress, goals, categoryTotals, overallExpense, monthlyProfit)
+            val paymentTotals = allTransactions.paymentTotalsForMonth(curYear, curMonth)
+            buildGoalsProgress(llGoalsProgress, goals, categoryTotals, paymentTotals, overallExpense, monthlyProfit)
         }
 
         fun renderSummary() {
@@ -434,6 +436,7 @@ class ReportsFragment : Fragment() {
         container: LinearLayout,
         goals: List<Goal>,
         categoryTotals: Map<String, Double>,
+        paymentTotals: Map<String, Double>,
         overallExpense: Double,
         monthlyProfit: Double
     ) {
@@ -459,18 +462,27 @@ class ReportsFragment : Fragment() {
 
         visibleGoals.forEachIndexed { idx, goal ->
             val isLucro = goal.type == "lucro"
+            val isPagamento = goal.type == "pagamento"
 
-            val spent = if (goal.category.isBlank()) overallExpense else (categoryTotals[goal.category] ?: 0.0)
+            val spent = when {
+                isPagamento              -> paymentTotals[goal.paymentMethod] ?: 0.0
+                goal.category.isBlank()  -> overallExpense
+                else                     -> categoryTotals[goal.category] ?: 0.0
+            }
 
             val current = if (isLucro) monthlyProfit else spent
 
             val pct = if (goal.targetAmount > 0) (current / goal.targetAmount * 100.0) else 0.0
 
-            val label = if (isLucro) "Lucro mensal" else goal.category.ifBlank { "Geral (todas as despesas)" }
-            val caption = if (isLucro) {
-                "Meta de lucro: receita menos despesa do mês"
-            } else {
-                "Limite de gasto: " + if (goal.category.isBlank()) "soma de todas as despesas do mês" else "categoria \"${goal.category}\""
+            val label = when {
+                isLucro     -> "Lucro mensal"
+                isPagamento -> goal.paymentMethod
+                else        -> goal.category.ifBlank { "Geral (todas as despesas)" }
+            }
+            val caption = when {
+                isLucro     -> "Meta de lucro: receita menos despesa do mês"
+                isPagamento -> "Limite por forma de pagamento: despesas do mês pagas com \"${goal.paymentMethod}\""
+                else        -> "Limite de gasto: " + if (goal.category.isBlank()) "soma de todas as despesas do mês" else "categoria \"${goal.category}\""
             }
             val isLast = idx == goals.size - 1
 
