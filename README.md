@@ -1,12 +1,10 @@
 <div align="center">
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:1D4ED8,50:2563EB,100:16A34A&height=220&section=header&text=Finlytics&fontSize=72&fontColor=ffffff&fontAlignY=38&desc=Seu%20dinheiro%2C%20finalmente%20sob%20controle&descSize=20&descAlignY=58&animation=fadeIn" width="100%" alt="Finlytics" />
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:1E3A8A,50:2563EB,100:60A5FA&height=220&section=header&text=Finlytics&fontSize=72&fontColor=ffffff&fontAlignY=38&desc=Seu%20dinheiro%2C%20finalmente%20sob%20controle&descSize=20&descAlignY=58&animation=fadeIn" width="100%" alt="Finlytics" />
 
-<img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png" width="110" alt="Ícone do Finlytics" />
-
-<a href="https://github.com/borgeizdev/Finlytics">
+<p align="center">
   <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=22&duration=3200&pause=900&color=2563EB&center=true&vCenter=true&width=620&lines=%F0%9F%92%B8+Registre+receitas+e+despesas+em+segundos;%F0%9F%93%8A+Relat%C3%B3rios+e+insights+autom%C3%A1ticos;%F0%9F%8E%AF+Metas+e+limites+por+forma+de+pagamento;%F0%9F%94%81+Recorr%C3%AAncias+que+se+lan%C3%A7am+sozinhas" alt="Typing SVG" />
-</a>
+</p>
 
 <br/>
 
@@ -242,38 +240,10 @@ cd Finlytics
 
 <div align="center">
 
-<table>
-  <tr>
-    <td align="center" width="200">
-      <a href="https://github.com/borgeizdev">
-        <img src="https://github.com/borgeizdev.png" width="110" style="border-radius:50%" alt="borgeizdev" /><br/>
-        <sub><b>borgeizdev</b></sub>
-      </a><br/>
-      <sub>💻 Desenvolvimento</sub>
-    </td>
-    <td align="center" width="200">
-      <a href="https://github.com/leoalmeidahdev">
-        <img src="https://github.com/leoalmeidahdev.png" width="110" style="border-radius:50%" alt="leoalmeidahdev" /><br/>
-        <sub><b>leoalmeidahdev</b></sub>
-      </a><br/>
-      <sub>💻 Desenvolvimento</sub>
-    </td>
-    <td align="center" width="200">
-      <a href="https://github.com/puskadaa">
-        <img src="https://github.com/puskadaa.png" width="110" style="border-radius:50%" alt="puskadaa" /><br/>
-        <sub><b>puskadaa</b></sub>
-      </a><br/>
-      <sub>💻 Desenvolvimento</sub>
-    </td>
-  </tr>
-</table>
-
-<br/>
-
 Desenvolvido por **[borgeizdev](https://github.com/borgeizdev)**, **[leoalmeidahdev](https://github.com/leoalmeidahdev)** e **[puskadaa](https://github.com/puskadaa)**
 
 <sub>Trabalho de Conclusão de Curso · 2026</sub>
 
 </div>
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:16A34A,50:2563EB,100:1D4ED8&height=120&section=footer" width="100%" alt="" />
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:60A5FA,50:2563EB,100:1E3A8A&height=120&section=footer" width="100%" alt="" />
